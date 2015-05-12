@@ -2,7 +2,7 @@ library(rgdal); library(raster); library(sp); library(gtools); library(C50)
 
 
 #Files location
-setwd("I:/rcodes/dsmart/burdekin7km/burdekin7km")
+setwd("/home/brendo/myWork/dsmart/data")
 # Identify map unit polygon shapefile (attribute table structured the same way as for Python DSMART)
 shapefile = "dlr_polys_alb_7km.shp"
 # Map unit composition file
@@ -32,6 +32,7 @@ colnames(composition) = c("poly","mapunit","soil_class","proportion")
 dsmart(covariates = covariates, polygons = shp, composition = composition, n=15, reals = 20, cpus=8)
 
 ####### DSMART probability rasters #######
+
 test1<- dsmartR(rLocs= "I:/rcodes/dsmart/burdekin7km/burdekin7km/dsmartOuts/rasters", nprob = 3, sepP=TRUE, lookup= lookup)
 
 
