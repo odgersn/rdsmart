@@ -32,8 +32,17 @@ colnames(composition) = c("poly","mapunit","soil_class","proportion")
 dsmart(covariates = covariates, polygons = shp, composition = composition, n=15, reals = 20, cpus=8)
 
 ####### DSMART probability rasters #######
+setwd("/home/brendo/myWork/dsmart/data/dsmartOuts/rasters")
+list.files(getwd(),  pattern="tif$", full.names=FALSE)
+files<- list.files(getwd(), pattern='tif$',full.names=T)
 
-test1<- dsmartR(rLocs= "I:/rcodes/dsmart/burdekin7km/burdekin7km/dsmartOuts/rasters", nprob = 3, sepP=TRUE, lookup= lookup)
+s8<- stack()
+for (i in 1:length(files)){
+  r1<- raster(files[i])
+  s8<- stack(s8, r1)}
+lookup <- read.table("classLookupTable.txt",sep=",", header=TRUE)
+
+test1<- dsmartR(rLocs= s8, nprob = 3, sepP=TRUE, lookup= lookup,cpus=2)
 
 
 
