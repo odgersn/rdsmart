@@ -15,8 +15,7 @@
 # sepP: logical of whether class probability maps should be produced
 # lookup: lookup table produced from dsmart that numerically links soil class codes to a number
 
-dsmartR<- function(rLocs= NULL, nprob = NULL, sepP=FALSE, lookup= NULL, cpus=1,param=NULL,param2=NULL){
-  assign('param', param)
+dsmartR<- function(rLocs= NULL, nprob = NULL, sepP=FALSE, lookup= NULL, cpus=1){
   beginCluster(cpus)
   #setwd(rLocs)
   dir.create("counts/",showWarnings = F)
@@ -27,6 +26,8 @@ dsmartR<- function(rLocs= NULL, nprob = NULL, sepP=FALSE, lookup= NULL, cpus=1,p
   strn<- paste(getwd(),"/nProbable/",sep="")
   
   s1<- rLocs
+  param<- nrow(lookup)
+  param2<-nlayers(s1)
   
   #counts
   nme1<- paste(strc,"countOuts.tif" ,sep="") 

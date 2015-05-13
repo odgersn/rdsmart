@@ -1,42 +1,43 @@
-\name{Goodness of fit measures}
+\name{dsmartR}
 \docType{methods}
-\alias{goof}
-\title{Goodness of fit measures}
-\description{This function performs a number of model goodness of fit measures which include the root mean square error (RMSE), mean square error (MSE),  prediction bias, coefficient of determination (R squared), concordance correlation coefficient (CCC), ratio of performance to deviation (RPD), ratio of performance to interquartile distance (RPIQ), and residual variance estimates. These goodness of fit measures are used in both digital soil mapping and soil chemometric studies to test the relative performance of competing models.}
+\alias{dsmartR}
+\title{Disaggregating and harmonising soil map units through resampled classification trees}
+\description{This function, together with companion function \code{dsmart} implements the the dsmart (Disaggregating and harmonising soil map units through resampled classification trees) algorithm as described in Odgers et al. (2014). Essentially this function interogates C5 model predicted soil class outputs (rasters) from \code{dsmart} to create maps of the n-most probable soil classes, together with probability raster of each candidate soil class.}
 
-\usage{goof(observed,predicted, plot.it = FALSE, type="DSM")}
+\usage{dsmartR(rLocs= NULL, nprob = NULL, sepP=FALSE, lookup= NULL, cpus=1,param=NULL,param2=NULL)}
 \arguments{
-  \item{observed}{numeric; a vector or matrix of values that are actual observations of some phenomenon.} 
-  \item{predicted}{numeric; a vector or matrix of values of predictions of the phenomenon that was observed .}     
-  \item{plot.it}{logical; If TRUE an xy-plot of the observations and predictions will be generated. }
-  \item{type}{character; Selection from either ``DSM'' or ``spec'' to generate the goodness of fit statistics of greatest relevance to either digital soil mapping and soil spectroscopy respectively.}
+  \item{rLocs}{\code{RasterStack}; a stack of the individual soil class rasters that are created from the companion \code{dsmart} function.} 
+  \item{nprob}{numeric; the number of n-most probable soil class maps to create. 1 indicates the most probable soil class most only. 2 would indicate the most probable and second most probable soil class maps are created. A \code{RasterBrick} of all probable rasters (the number equals the number of candidate soil classes) is automatically created, yet requesting the n-most probable will create individually the requested number of n-probable maps.}     
+  \item{sepP}{logical; If \code{TRUE} probability rasters of each candidate soil class are created.}
+  \item{lookup}{\code{data.frame}; An output from the companion \code{dsmart} function. This data links a unique numerical value to each candidate soil class code such as a character name.}
+  \item{cpus}{numerical; numeric; number of compute nodes to use. Default is 1.}
 }
 
-\value{Returns a dataframe with the goodness of fit statistics. The column headers of the \code{dataframe} are: \code{R2} (coefficient of determination), \code{concordance} (concordance correlation coefficient), \code{MSE} (mean square error), \code{RMSE} (root mean square error), \code{bias} (prediction bias), \code{MSEc} (mean residual variance), \code{RMSEc} (root mean residual variance), \code{RPD} (ratio of performance to deviation), \code{RPIQ} (ratio of performance to interquartile distance). An xy-plot will also be generated if requested. }
+\value{This function returns 3 folders to the working directory: nProbable, probabilities, and counts. nProbable contains the n-most probable soil class maps. probabilities contains the probability rasters for each candidte soil class if requested. counts contains a \code{RasterBrick} of the count of predicted candidate soil classes from the output realisations of \code{dsmart}. A \code{list} of the n-most probable rasters (\code{RasterStack}) and probabilitiy rasters (if requested) are saved to the working memory.}
 
-\note{These goodness of fit measures are not exclusive to digital soil mapping or soil spectroscopy.}
+\note{The \code{dsmart} function is a companion function to \code{dsmartR}. Together both functions are computationally demanding. The reprieve for this is that very little memory is stored in the global environment, with rasters being written directly to file. Similarly for greater efficency is is also better to keep input rasters (\code{rLocs}) in file, rather than load to memory.}
 
-\author{Brendan Malone}
+\author{Nathan Odgers and Brendan Malone}
+
 \references{
 \itemize{
-\item Bellon-Maurel, V., Fernandez-Ahumada, E., Palagos, B., Roger, J., McBratney, A., (2010) \href{http://dx.doi:10.1016/j.trac.2010.05.006}{Critical review of chemometric indicators commonly used for assessing the quality of the prediction of soil attributes by NIR spectroscopy}. Trends in Analytical Chemistry, 29(9): 1073-1081.
-\item Hastie, T., Tibshirani, R., Friedman, J., (2009)  The Elements of Statisitcal Learning. Springer Series in Statistics.}
+\item Odgers, N.P., Sun, W., McBratney, A.B., Minasny, B., Clifford, D., (2014) \href{http://dx.doi.org/10.1016/j.geoderma.2013.09.024}{Disaggregating and harmonising soil map units through resampled classification trees}. Geoderma, 214-215: 91-100.
+\item Odgers, N.P., Sun, McBratney, A.B., Minasny, B., (2015) \href{http://dx.doi.org/10.1016/j.geoderma.2014.09.009}{Digital soil property mapping and uncertainty estimation using soil class probability rasters}. Geoderma, 237:238 190-198.
 }
 
 
 \examples{
-library(ithir)
-library(MASS)
+library(dsmart)
+library(raster)
 
 
-#some data
-data(USYD_soil1)
+#set parameters
+data(dsT_lookup) #lookup table
+data(dsmartOutMaps) #Results from 5 realiations of dsmart
 
-#fit a linear model
-mod.1 <- lm(CEC ~ clay, data = USYD_soil1 , y = TRUE, x = TRUE)
 
-#Goodness of fit
-goof(observed = mod.1$y, predicted = mod.1$fitted.values, plot.it = TRUE)
+#run function getting 3 most probable and creating probability raster using 1 compute core.
+dsmartR(rLocs= dsmartOutMaps, nprob = 3, sepP=TRUE, lookup= dsT_lookup, cpus=1)
 
 }
 \keyword{methods}

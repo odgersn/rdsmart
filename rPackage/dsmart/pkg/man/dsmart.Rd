@@ -33,6 +33,7 @@
 
 \examples{
 library(dsmart)
+library(raster)
 
 
 
