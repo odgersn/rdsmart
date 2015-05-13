@@ -27,7 +27,7 @@ dsmartR<- function(rLocs= NULL, nprob = NULL, sepP=FALSE, lookup= NULL, cpus=1){
   
   s1<- rLocs
   param<- nrow(lookup)
-  param2<-nlayers(s1)
+  
   
   #counts
   nme1<- paste(strc,"countOuts.tif" ,sep="") 
@@ -38,8 +38,8 @@ dsmartR<- function(rLocs= NULL, nprob = NULL, sepP=FALSE, lookup= NULL, cpus=1){
   
   
   #probabilities
-  nme2<- paste(strp,"countOutsPropbs.tif" ,sep="") 
-  param2 = param2
+  nme2<- paste(strp,"countOutsPropbs.tif" ,sep="")
+  param2<-nlayers(s1)
   f2<- function(x) (x/param2)
   assign("param2", param2, envir=.GlobalEnv)
   probs= clusterR(counts, calc,  args=list(fun=f2), export= "param2",filename=nme2,format="GTiff",overwrite=T )

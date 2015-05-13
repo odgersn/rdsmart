@@ -25,6 +25,10 @@ dsT_lookup
 
 
 #Run Functions
-dsmartR(rLocs= dsT_covariates, nprob = 2, sepP=TRUE, lookup=dsT_lookup , cpus=1)
-
+library(rgdal); library(raster); library(sp); library(gtools); library(C50)
+setwd("/home/brendo/myWork/dsmart/data")
+#dsmart
+dsmart(covariates = dsT_covariates, polygons = dsT_polygons, composition = dsT_composition, n=15, reals = 5, cpus=2)
+#dsmartR
+dsmartR(rLocs= dsmartOutMaps, nprob = 2, sepP=TRUE, lookup=dsT_lookup , cpus=2)
 
