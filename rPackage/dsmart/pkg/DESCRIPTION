@@ -1,3 +1,12 @@
 Package: dsmart
 Type: Package
-Title: 
+Title: Disaggregation and harmonisation of soil map units through resampled classification trees
+Version: 1.0
+Date: 2015-13-05
+Author: Brendan Malone
+Maintainer: Brendan Malone <brendan.malone@sydney.edu.au>
+Description: Disaggregate and harmonise of soil map units
+Depends: R (>= 3.0.1)
+Imports: raster, snow, rgdal, sp, C50, gtools
+License: GPL-2
+LazyData: no
