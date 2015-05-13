@@ -29,7 +29,7 @@ colnames(composition) = c("poly","mapunit","soil_class","proportion")
 
 
 ####### DSMART tree creation #######
-dsmart(covariates = covariates, polygons = shp, composition = composition, n=15, reals = 20, cpus=8)
+dsmart(covariates = covariates, polygons = shp, composition = composition, n=15, reals = 5, cpus=4)
 
 ####### DSMART probability rasters #######
 setwd("/home/brendo/myWork/dsmart/data/dsmartOuts/rasters")
@@ -42,7 +42,9 @@ for (i in 1:length(files)){
   s8<- stack(s8, r1)}
 lookup <- read.table("classLookupTable.txt",sep=",", header=TRUE)
 
-test1<- dsmartR(rLocs= s8, nprob = 3, sepP=TRUE, lookup= lookup,cpus=2)
+
+
+test1<- dsmartR(rLocs= s8, nprob = 3, sepP=TRUE, lookup = lookup,cpus=2, param=nrow(lookup), param2 = nlayers(s8))
 
 
 

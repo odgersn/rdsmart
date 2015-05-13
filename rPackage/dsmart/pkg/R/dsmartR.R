@@ -15,7 +15,8 @@
 # sepP: logical of whether class probability maps should be produced
 # lookup: lookup table produced from dsmart that numerically links soil class codes to a number
 
-dsmartR<- function(rLocs= NULL, nprob = NULL, sepP=FALSE, lookup= NULL, cpus=1){
+dsmartR<- function(rLocs= NULL, nprob = NULL, sepP=FALSE, lookup= NULL, cpus=1,param=NULL,param2=NULL){
+  assign('param', param)
   beginCluster(cpus)
   #setwd(rLocs)
   dir.create("counts/",showWarnings = F)
@@ -29,15 +30,17 @@ dsmartR<- function(rLocs= NULL, nprob = NULL, sepP=FALSE, lookup= NULL, cpus=1){
   
   #counts
   nme1<- paste(strc,"countOuts.tif" ,sep="") 
-  param<-nrow(lookup)
-  f1<- function(x) tabulate(x, nbins=param)
-  counts<-clusterR(s1, calc, args=list(fun=f1), export= "param",filename=nme1,format="GTiff",overwrite=T)
+  f1<- function(x) {
+    tabulate(x, nbins=param)}
+  assign("param", param, envir=.GlobalEnv)
+  counts<-clusterR(s1, calc, args=list(fun= f1), export = "param",filename=nme1,format="GTiff",overwrite=T)
   
   
   #probabilities
   nme2<- paste(strp,"countOutsPropbs.tif" ,sep="") 
-  param2<-nlayers(s1)
+  param2 = param2
   f2<- function(x) (x/param2)
+  assign("param2", param2, envir=.GlobalEnv)
   probs= clusterR(counts, calc,  args=list(fun=f2), export= "param2",filename=nme2,format="GTiff",overwrite=T )
   
   if (sepP==TRUE) {s3<- stack()
