@@ -4,7 +4,7 @@
 \title{Disaggregating and harmonising soil map units through resampled classification trees}
 \description{This function, together with companion function \code{dsmart} implements the the dsmart (Disaggregating and harmonising soil map units through resampled classification trees) algorithm as described in Odgers et al. (2014). Essentially this function interogates C5 model predicted soil class outputs (rasters) from \code{dsmart} to create maps of the n-most probable soil classes, together with probability raster of each candidate soil class.}
 
-\usage{dsmartR(rLocs= NULL, nprob = NULL, sepP=FALSE, lookup= NULL, cpus=1,param=NULL,param2=NULL)}
+\usage{dsmartR(rLocs= NULL, nprob = NULL, sepP=FALSE, lookup= NULL, cpus=1)}
 \arguments{
   \item{rLocs}{\code{RasterStack}; a stack of the individual soil class rasters that are created from the companion \code{dsmart} function.} 
   \item{nprob}{numeric; the number of n-most probable soil class maps to create. 1 indicates the most probable soil class most only. 2 would indicate the most probable and second most probable soil class maps are created. A \code{RasterBrick} of all probable rasters (the number equals the number of candidate soil classes) is automatically created, yet requesting the n-most probable will create individually the requested number of n-probable maps.}     
@@ -23,7 +23,7 @@
 \itemize{
 \item Odgers, N.P., Sun, W., McBratney, A.B., Minasny, B., Clifford, D., (2014) \href{http://dx.doi.org/10.1016/j.geoderma.2013.09.024}{Disaggregating and harmonising soil map units through resampled classification trees}. Geoderma, 214-215: 91-100.
 \item Odgers, N.P., Sun, McBratney, A.B., Minasny, B., (2015) \href{http://dx.doi.org/10.1016/j.geoderma.2014.09.009}{Digital soil property mapping and uncertainty estimation using soil class probability rasters}. Geoderma, 237:238 190-198.
-}
+}}
 
 
 \examples{

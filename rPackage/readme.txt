@@ -7,3 +7,6 @@ NEED TO DO:
 1. Write up the manuals for the companion functions
 2. Write description and namespace files
 
+##14.05.15
+Writing up the manuals presently for the functions and data.
+

@@ -1,8 +1,5 @@
 import("rgdal") 
-import("raster")
 import("sp")
-import("gtools") 
-import("C50")
 import("snow")
 importFrom("raster", beginCluster, endCluster, clusterR, predict, extract, calc, nlayers, writeRaster, stack)
 importFrom("gtools", rdirichlet)
