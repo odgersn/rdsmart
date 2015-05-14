@@ -9,4 +9,7 @@ NEED TO DO:
 
 ##14.05.15
 Writing up the manuals presently for the functions and data.
+Did first build of package. Worked ok on unix. Didnt work for windows.
+Built package on windows computer ok
+Some manual typos attended to.
 
