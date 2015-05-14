@@ -2,7 +2,7 @@
 \docType{data}
 \alias{dsT_polygons}
 \title{Soil polygon map}
-\description{A \code{SpatialPolygonsDataFrame} of a soil map showing soil mapping units. This map is essential a common shapefile that has been read into the \code{R} environment. This data is for testing the companion \code{dsmart} and \code{dsmartR} functions and is a subset of the soil map described and disaggregated by Odgers et al. (2014). The polygons represent soil mapping units. The attribute table contains information regarding the sol class compositions and their proportions with each soil mapping unit.}
+\description{A \code{SpatialPolygonsDataFrame} of a soil map showing soil mapping units. This map is essentially a common shapefile that has been read into the \code{R} environment. This data is for testing the companion \code{dsmart} and \code{dsmartR} functions and is a subset of the soil map described and disaggregated by Odgers et al. (2014). The polygons represent soil mapping units. The attribute table contains information regarding the soil class compositions and their proportions within each soil mapping unit.}
 
 \usage{data(dsT_polygons)}
 \format{

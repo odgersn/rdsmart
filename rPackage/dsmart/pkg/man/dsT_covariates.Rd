@@ -2,7 +2,7 @@
 \docType{data}
 \alias{dsT_covariates}
 \title{Environmental covariate suite of rasters for testing DSMART}
-\description{A \code{RasterStack} of 20 environmental covariate rasters. These data are described in Odgers et al. (2014). The assembled covariates are surrogates for soil forming factors and a commonly referred to as scorpan factors, where scorpan is a mnemonic of the soil forming factors (s) soil, (c) climate, (o) organism, (r) relief, (p) parent material, (a) age, and (n) spatial position (McBratney et al. 2003). The \code{RasterStack} is a small subset from the Dalrymple Shire in Central Queensland, Australia. The subset area is a 7km by 7km square, and the rasters have a 30m pixel resolution. The coordinate reference system of these maps is GDA 1994 Australia Albers.}
+\description{A \code{RasterStack} of 20 environmental covariate rasters. These data are described in Odgers et al. (2014). The assembled covariates are surrogates for soil forming factors and are commonly referred to as scorpan factors, where scorpan is a mnemonic of the soil forming factors (s) soil, (c) climate, (o) organism, (r) relief, (p) parent material, (a) age, and (n) spatial position (McBratney et al. 2003). The \code{RasterStack} is a small subset from the Dalrymple Shire in Central Queensland, Australia. The subset area is a 7km by 7km square, and the rasters have a 30m pixel resolution. The coordinate reference system of these maps is GDA 1994 Australia Albers.}
 
 \usage{data(dsT_covariates)}
 \format{

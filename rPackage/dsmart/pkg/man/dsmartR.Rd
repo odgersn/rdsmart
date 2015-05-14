@@ -2,20 +2,20 @@
 \docType{methods}
 \alias{dsmartR}
 \title{Disaggregating and harmonising soil map units through resampled classification trees}
-\description{This function, together with companion function \code{dsmart} implements the the dsmart (Disaggregating and harmonising soil map units through resampled classification trees) algorithm as described in Odgers et al. (2014). Essentially this function interogates C5 model predicted soil class outputs (rasters) from \code{dsmart} to create maps of the n-most probable soil classes, together with probability raster of each candidate soil class.}
+\description{This function, together with companion function \code{dsmart} implements the the dsmart (Disaggregating and harmonising soil map units through resampled classification trees) algorithm as described in Odgers et al. (2014). Essentially this function interrogates C5 model predicted soil class outputs (rasters) from \code{dsmart} to create maps of the n-most probable soil classes, together with probability rasters of each candidate soil class.}
 
 \usage{dsmartR(rLocs= NULL, nprob = NULL, sepP=FALSE, lookup= NULL, cpus=1)}
 \arguments{
   \item{rLocs}{\code{RasterStack}; a stack of the individual soil class rasters that are created from the companion \code{dsmart} function.} 
-  \item{nprob}{numeric; the number of n-most probable soil class maps to create. 1 indicates the most probable soil class most only. 2 would indicate the most probable and second most probable soil class maps are created. A \code{RasterBrick} of all probable rasters (the number equals the number of candidate soil classes) is automatically created, yet requesting the n-most probable will create individually the requested number of n-probable maps.}     
+  \item{nprob}{numeric; the number of n-most probable soil class maps to create. 1 indicates the most probable soil class only. 2 would indicate the most probable and second most probable soil class maps are requested etc. A \code{RasterBrick} of all probable rasters (the number equals the number of candidate soil classes) is automatically created, yet requesting the n-most probable will create individually the requested number of n-probable maps.}     
   \item{sepP}{logical; If \code{TRUE} probability rasters of each candidate soil class are created.}
   \item{lookup}{\code{data.frame}; An output from the companion \code{dsmart} function. This data links a unique numerical value to each candidate soil class code such as a character name.}
-  \item{cpus}{numerical; numeric; number of compute nodes to use. Default is 1.}
+  \item{cpus}{numeric; number of compute nodes to use. Default is 1.}
 }
 
-\value{This function returns 3 folders to the working directory: nProbable, probabilities, and counts. nProbable contains the n-most probable soil class maps. probabilities contains the probability rasters for each candidte soil class if requested. counts contains a \code{RasterBrick} of the count of predicted candidate soil classes from the output realisations of \code{dsmart}. A \code{list} of the n-most probable rasters (\code{RasterStack}) and probabilitiy rasters (if requested) are saved to the working memory.}
+\value{This function returns 3 folders to the working directory: nProbable, probabilities, and counts. 'nProbable' contains the n-most probable soil class maps. 'probabilities' contains the probability rasters for each candidate soil class if requested. 'counts' contains a \code{RasterBrick} of the count of predicted candidate soil classes from the output realisations of \code{dsmart}. A \code{list} of the n-most probable rasters (\code{RasterStack}) and probability rasters (if requested) are saved to the working memory.}
 
-\note{The \code{dsmart} function is a companion function to \code{dsmartR}. Together both functions are computationally demanding. The reprieve for this is that very little memory is stored in the global environment, with rasters being written directly to file. Similarly for greater efficency is is also better to keep input rasters (\code{rLocs}) in file, rather than load to memory.}
+\note{The \code{dsmart} function is a companion function to \code{dsmartR}. Together both functions are computationally demanding. The reprieve for this is that very little memory is stored in the global environment, with rasters being written directly to file. Similarly for greater efficiency is is also better to keep input rasters (\code{rLocs}) in file, rather than load to memory.}
 
 \author{Nathan Odgers and Brendan Malone}
 

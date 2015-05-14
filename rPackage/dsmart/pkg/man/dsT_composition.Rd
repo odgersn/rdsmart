@@ -2,7 +2,7 @@
 \docType{data}
 \alias{dsT_composition}
 \title{Soil mapping unit compositions}
-\description{A \code{data.frame} of that tabulates the soil class compositions for each mapping unit from the \code{dsT_polyons} soil map. The nature of this data is a required input for the \code{dsmart} function. This data is for testing the companion \code{dsmart} and \code{dsmartR} functions.}
+\description{A \code{data.frame} that tabulates the soil class compositions for each mapping unit from the \code{dsT_polyons} soil map. The nature of this data is a required input for the \code{dsmart} function. This data is for testing the companion \code{dsmart} and \code{dsmartR} functions.}
 
 \usage{data(dsT_composition)}
 \format{
