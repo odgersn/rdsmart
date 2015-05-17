@@ -13,3 +13,9 @@ Did first build of package. Worked ok on unix. Didnt work for windows.
 Built package on windows computer ok
 Some manual typos attended to.
 
+##17.05.15
+Package seems to be building ok.
+Need to:
+	1. Calculate probabilties of n-probables
+	2. Calculate confusion index.
+
