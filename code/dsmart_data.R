@@ -22,6 +22,7 @@ dsT_polygons
 #dsmart polygons
 load("dsT_lookup.rda")
 dsT_lookup
+setwd("/home/brendo/myWork/")
 
 
 #Run Functions

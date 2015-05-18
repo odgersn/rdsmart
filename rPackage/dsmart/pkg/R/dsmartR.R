@@ -16,6 +16,7 @@
 # lookup: lookup table produced from dsmart that numerically links soil class codes to a number
 
 dsmartR<- function(rLocs= NULL, nprob = 2, sepP=FALSE, lookup= NULL, cpus=1){
+  pb <- txtProgressBar(min=0, max=100, style=3)
   beginCluster(cpus)
   #setwd(rLocs)
   dir.create("counts/",showWarnings = F)
@@ -35,6 +36,7 @@ dsmartR<- function(rLocs= NULL, nprob = 2, sepP=FALSE, lookup= NULL, cpus=1){
     tabulate(x, nbins=param)}
   assign("param", param, envir=.GlobalEnv)
   counts<-clusterR(s1, calc, args=list(fun= f1), export = "param",filename=nme1,format="GTiff",overwrite=TRUE)
+  setTxtProgressBar(pb, 25)
   
   
   #probabilities
@@ -43,6 +45,7 @@ dsmartR<- function(rLocs= NULL, nprob = 2, sepP=FALSE, lookup= NULL, cpus=1){
   f2<- function(x) (x/param2)
   assign("param2", param2, envir=.GlobalEnv)
   probs= clusterR(counts, calc,  args=list(fun=f2), export= "param2",filename=nme2,format="GTiff",overwrite=TRUE )
+  setTxtProgressBar(pb, 50)
   
   if (sepP==TRUE) {s3<- stack()
                    for (np in 1:nlayers(probs)){
@@ -60,6 +63,7 @@ dsmartR<- function(rLocs= NULL, nprob = 2, sepP=FALSE, lookup= NULL, cpus=1){
     nme4<- paste(strn,paste(zz,"_probable.tif",sep=""),sep="")
     s4<- stack(s4,ordered.indices[[zz]])
     writeRaster(ordered.indices[[zz]],filename=nme4,format="GTiff",overwrite=TRUE)}
+  setTxtProgressBar(pb, 75)
   #Most probable probabilities
   nme5<- paste(strp,"OrderedProbs.tif" ,sep="")
   f4<- function(x) sort(x, decreasing=TRUE, na.last=TRUE)
@@ -69,14 +73,16 @@ dsmartR<- function(rLocs= NULL, nprob = 2, sepP=FALSE, lookup= NULL, cpus=1){
     nme6<- paste(strn,paste(zz,"_probableProbs.tif",sep=""),sep="")
     s5<- stack(s5,ordered.probs[[zz]])
     writeRaster(ordered.probs[[zz]],filename=nme6,format="GTiff",overwrite=T)}
+  setTxtProgressBar(pb, 90)
   #Confusion Index
   nme7<- paste(strn,"confusionIndex.tif",sep="")
   f4<- function(x) (1-(x[[1]]-x[[2]]))
   confusInd<- clusterR(ordered.probs, fun=f4, filename=nme7, format="GTiff", overwrite=TRUE)
-  
+  setTxtProgressBar(pb, 100)
   endCluster()
   
   if (sepP==TRUE){retval<-list(s3,s4,s5,confusInd)} else{ retval<-list(s4)}
+  close(pb)
   message(paste("DSMART outputs can be located at:",getwd(), sep=" "))
   return(retval)}
 

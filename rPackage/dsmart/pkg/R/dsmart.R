@@ -47,7 +47,7 @@ dsmart<-function(covariates = NULL, polygons = NULL, composition = NULL, n=NULL,
   strs<- paste(getwd(),"/dsmartOuts/summaries/",sep="")
   write.table(lookup, paste(strg,"classLookupTable.txt",sep=""),sep=",", col.names=T,row.names=F) 
   
-  
+  pb <- txtProgressBar(min=0, max=reals, style=3)
   for (j in 1:reals){
     # Empty data frame to store samples
     coordF<- matrix(NA, nrow=1000, ncol=3)
@@ -89,11 +89,13 @@ dsmart<-function(covariates = NULL, polygons = NULL, composition = NULL, n=NULL,
       cat(out,file=f2,sep="\n",append=TRUE)
     
     nme<- paste(paste(paste(strg,"map",sep=""),"_",j,sep=""), ".tif", sep="")
-    r1 <- clusterR(covariates, predict, args=list(res),filename=nme,format="GTiff",overwrite=T, datatype="INT2S")}
+    r1 <- clusterR(covariates, predict, args=list(res),filename=nme,format="GTiff",overwrite=T, datatype="INT2S")
+  setTxtProgressBar(pb, j)}
   
   #Save models to file
   save(model_lists, file = paste(paste(getwd(),"/dsmartOuts/",sep=""),"dsmartModels.RData", sep="") )
   endCluster()
+  close(pb)
   message(paste(paste("DSMART outputs can be located at:",getwd(), sep=" "), "/dsmartOuts/",sep="") )}
 
 #END
