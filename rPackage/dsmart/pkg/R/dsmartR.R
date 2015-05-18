@@ -15,7 +15,7 @@
 # sepP: logical of whether class probability maps should be produced
 # lookup: lookup table produced from dsmart that numerically links soil class codes to a number
 
-dsmartR<- function(rLocs= NULL, nprob = NULL, sepP=FALSE, lookup= NULL, cpus=1){
+dsmartR<- function(rLocs= NULL, nprob = 2, sepP=FALSE, lookup= NULL, cpus=1){
   beginCluster(cpus)
   #setwd(rLocs)
   dir.create("counts/",showWarnings = F)
@@ -34,34 +34,49 @@ dsmartR<- function(rLocs= NULL, nprob = NULL, sepP=FALSE, lookup= NULL, cpus=1){
   f1<- function(x) {
     tabulate(x, nbins=param)}
   assign("param", param, envir=.GlobalEnv)
-  counts<-clusterR(s1, calc, args=list(fun= f1), export = "param",filename=nme1,format="GTiff",overwrite=T)
+  counts<-clusterR(s1, calc, args=list(fun= f1), export = "param",filename=nme1,format="GTiff",overwrite=TRUE)
   
   
   #probabilities
-  nme2<- paste(strp,"countOutsPropbs.tif" ,sep="")
+  nme2<- paste(strp,"countOutsProbs.tif" ,sep="")
   param2<-nlayers(s1)
   f2<- function(x) (x/param2)
   assign("param2", param2, envir=.GlobalEnv)
-  probs= clusterR(counts, calc,  args=list(fun=f2), export= "param2",filename=nme2,format="GTiff",overwrite=T )
+  probs= clusterR(counts, calc,  args=list(fun=f2), export= "param2",filename=nme2,format="GTiff",overwrite=TRUE )
   
   if (sepP==TRUE) {s3<- stack()
                    for (np in 1:nlayers(probs)){
                      nme5<- paste(paste(strp, as.character(lookup[np,1]), sep=""), "_probs.tif", sep="")
                      names(probs[[np]])<- as.character(lookup[np,1])
                      s3<- stack(s3,probs[[np]])
-                     writeRaster(probs[[np]],filename=nme5,format="GTiff",overwrite=T)}}
+                     writeRaster(probs[[np]],filename=nme5,format="GTiff",overwrite=TRUE)}}
   
   #Most probable
   nme3<- paste(strn,"nProbable.tif",sep="")
   f3<- function(x) order(x, decreasing=TRUE, na.last=TRUE)
-  ordered.indices= clusterR(counts, calc,  args=list(fun=f3), filename=nme3,format="GTiff",overwrite=T )
+  ordered.indices= clusterR(counts, calc,  args=list(fun=f3), filename=nme3,format="GTiff",overwrite=TRUE )
   s4<- stack()
   for (zz in 1:nprob){
     nme4<- paste(strn,paste(zz,"_probable.tif",sep=""),sep="")
     s4<- stack(s4,ordered.indices[[zz]])
-    writeRaster(ordered.indices[[zz]],filename=nme4,format="GTiff",overwrite=T)}
+    writeRaster(ordered.indices[[zz]],filename=nme4,format="GTiff",overwrite=TRUE)}
+  #Most probable probabilities
+  nme5<- paste(strp,"OrderedProbs.tif" ,sep="")
+  f4<- function(x) sort(x, decreasing=TRUE, na.last=TRUE)
+  ordered.probs= clusterR(probs, calc,  args=list(fun=f4), filename=nme5,format="GTiff",overwrite=TRUE )
+  s5<- stack()
+  for (zz in 1:nprob){
+    nme6<- paste(strn,paste(zz,"_probableProbs.tif",sep=""),sep="")
+    s5<- stack(s5,ordered.probs[[zz]])
+    writeRaster(ordered.probs[[zz]],filename=nme6,format="GTiff",overwrite=T)}
+  #Confusion Index
+  nme7<- paste(strn,"confusionIndex.tif",sep="")
+  f4<- function(x) (1-(x[[1]]-x[[2]]))
+  confusInd<- clusterR(ordered.probs, fun=f4, filename=nme7, format="GTiff", overwrite=TRUE)
+  
   endCluster()
-  if (sepP==TRUE){retval<-list(s3,s4)} else{ retval<-list(s4)}
+  
+  if (sepP==TRUE){retval<-list(s3,s4,s5,confusInd)} else{ retval<-list(s4)}
   message(paste("DSMART outputs can be located at:",getwd(), sep=" "))
   return(retval)}
 

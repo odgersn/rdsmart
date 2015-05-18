@@ -3,7 +3,7 @@ Type: Package
 Title: Disaggregation and harmonisation of soil map units through resampled classification trees
 Version: 1.0
 Date: 2015-13-05
-Author: Brendan Malone
+Author: Nathan Odgers <nathan.odgers@sydney.edu.au> and Brendan Malone <brendan.malone@sydney.edu.au> 
 Maintainer: Brendan Malone <brendan.malone@sydney.edu.au>
 Description: Disaggregate and harmonise of soil map units
 Depends: R (>= 3.0.1)
