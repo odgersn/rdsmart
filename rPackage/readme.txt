@@ -19,3 +19,7 @@ Need to:
 	1. Calculate probabilties of n-probables
 	2. Calculate confusion index.
 
+
+##18.05.15
+Add the functionality of the previous days tasks (both 1 and 2)
+Add progress bars
