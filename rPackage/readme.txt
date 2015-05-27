@@ -23,3 +23,9 @@ Need to:
 ##18.05.15
 Add the functionality of the previous days tasks (both 1 and 2)
 Add progress bars
+
+##27.05.15
+Tried function on data set from NZ. Seems a bit slower than python version
+Improvements to make:
+	1. paralellise the extraction process on dsmart
+	2. make more general the composition table input.
