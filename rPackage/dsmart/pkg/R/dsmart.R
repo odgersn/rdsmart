@@ -32,6 +32,7 @@
 dsmart<-function(covariates = NULL, polygons = NULL, composition = NULL, n=NULL, reals = NULL, cpus=1){
   beginCluster(cpus)
   # Generate lookup table
+  names(composition)<- c("poly", "mapunit", "soil_class", "proportion")
   lookup = as.data.frame(sort(unique(composition$soil_class)))
   lookup$code = seq(from=1, to=nrow(lookup), by=1)
   colnames(lookup) = c("name", "code")

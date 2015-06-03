@@ -7,6 +7,7 @@ Author: Nathan Odgers <nathan.odgers@sydney.edu.au> and Brendan Malone <brendan.
 Maintainer: Brendan Malone <brendan.malone@sydney.edu.au>
 Description: Disaggregate and harmonise of soil map units
 Depends: R (>= 3.0.1)
-Imports: raster, snow, rgdal, sp, C50, gtools
+Imports: raster, rgdal, sp, C50, gtools
+Suggests: rasterVis, snow
 License: GPL-2
 LazyData: no
