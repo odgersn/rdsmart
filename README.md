@@ -1,5 +1,7 @@
-README
+##README
+
 dsmart R package
+
 This packages does disaggregation of soil map units contributing classes or series etc.
 
 
