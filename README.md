@@ -13,4 +13,4 @@ Make sure the devtools package is installed first
 
 library(devtools)
 
-install_bitbucket("brendo1001/fuzme/rPackage/fuzme")
+install_bitbucket("brendo1001/dsmart/rPackage/dsmart/pkg")
