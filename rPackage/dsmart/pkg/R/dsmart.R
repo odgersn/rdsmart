@@ -29,13 +29,14 @@
 #   
 
 
-dsmart<-function(covariates = NULL, polygons = NULL, composition = NULL, n=NULL, reals = NULL, cpus=1){
+dsmart<-function(covariates = NULL, polygons = NULL, composition = NULL, obsdat=NULL, n=NULL, reals = NULL, cpus=1){
   beginCluster(cpus)
   # Generate lookup table
   names(composition)<- c("poly", "mapunit", "soil_class", "proportion")
   lookup = as.data.frame(sort(unique(composition$soil_class)))
   lookup$code = seq(from=1, to=nrow(lookup), by=1)
   colnames(lookup) = c("name", "code")
+  if(!is.null(obsdat)){names(obsdat)<- c("x", "y", "class")}
   
   #create output repositories
   model_lists<- vector("list", reals) #empty list 
@@ -55,8 +56,9 @@ dsmart<-function(covariates = NULL, polygons = NULL, composition = NULL, n=NULL,
     coordF<- data.frame(coordF)
     names(coordF)<- c("x", "y", "class")
     cf<- 1
-    for(poly.id in polygons@data[,1])
-    {
+    
+    # take random samples within each polygon
+    for(poly.id in polygons@data[,1]){
       #print(poly.id)
       # Subset a single polygon
       poly = subset(polygons, polygons@data[,1]==poly.id)
@@ -70,8 +72,10 @@ dsmart<-function(covariates = NULL, polygons = NULL, composition = NULL, n=NULL,
       # Weighted-random sample
       coordF$class[cf:(cf+(n-1))]=sample(poly.comp$soil_class, size=n, replace=TRUE, prob=s[1,])
       cf<- cf+n}
+    
       #spatial object
       locs<- as.data.frame(coordF[complete.cases(coordF),])
+      locs<- rbind(locs,obsdat) # bind sampled data with observed data
       coordinates(locs)<- ~ x + y  
       # Extract covariate values for the sampling locations
       values=extract(covariates,locs)
@@ -80,6 +84,7 @@ dsmart<-function(covariates = NULL, polygons = NULL, composition = NULL, n=NULL,
       samples = cbind(as.data.frame(values),as.data.frame(locs)[,3])  
       names(samples)[ncol(samples)]<- "soil_class"
       samples$soil_class<- as.factor(samples$soil_class)
+      samples<- samples[complete.cases(samples), ]
     
       #Fit model####
       res = C5.0(samples[,-ncol(samples)], y=samples$soil_class)

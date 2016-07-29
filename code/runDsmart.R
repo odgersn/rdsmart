@@ -101,7 +101,31 @@ dsmartOutMaps <- s13
 save(dsmartOutMaps, file= "/home/brendo/myWork/dsmart/rPackage/dsmart/pkg/data/dsmartOutMaps.rda")
 
 
+#examples
+  library(dsmart)
+  library(raster)
+  
+  #load the relevent data
+  
+  #Covariates
+  data(dsT_covariates)
+  
+  #Polygons
+  data(dsT_polygons)
+  
+  #Map unit compositions
+  data(dsT_composition)
+  
+  #Run dsmart (with 15 samples per polygon, 5 C5 model realisations, using 1 compute node)
+  testRun<- dsmart(covariates = dsT_covariates, polygons = dsT_polygons, composition = dsT_composition, obsdat=obsLocs,  n=15, reals = 5, cpus=1)
+  testRun1<- dsmart(covariates = dsT_covariates, polygons = dsT_polygons, composition = dsT_composition, obsdat=NULL,  n=15, reals = 5, cpus=1)
 
 
 
 
+###Making a small dataset of observed data to include into the DSMART Algorithm (added 290716)
+training <- sample(nrow(locs), 0.7 * nrow(locs))
+obsLocs<- locs[training,]
+#covariates File
+dsmartOutMaps <- s13
+save(obsLocs, file= "C:/rdev/dsmart/rPackage/dsmart/pkg/data/obsLocs.rda")
