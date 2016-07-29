@@ -2,12 +2,12 @@
 \docType{data}
 \alias{obsLocs}
 \title{A collection of soil class observations}
-\description{A \code{data.frame} that tabulates the soil class compositions for each mapping unit from the \code{dsT_polyons} soil map. The nature of this data is a required input for the \code{dsmart} function. This data is for testing the companion \code{dsmart} and \code{dsmartR} functions.}
+\description{A \code{data.frame} containing point observations of soil classes. This data is for demonstration of the usage of incorporating observations within the soil map disaggregation procedure.}
 
-\usage{data(dsT_composition)}
+\usage{data(obsLocs)}
 \format{
-\code{dsT_composition} is of class \code{data.frame}.}
-\details{This is an example data set in order to familiarize users to the working and inputs required for operationalising DSMART which is implemented in the companion functions \code{dsmart} and \code{dsmartR}. It is composed of 4 columns. The first is the numeric identifier of a map unit, the second is the map unit character name, the third are the soil class codes and the last are the numeric proportions of each class to each soil mapping unit. All map units and their compositions are row-binded together.}
+\code{obsLocs} is of class \code{data.frame}.}
+\details{This is an example data set in order to familiarize users to the working and inputs required for operationalising DSMART which is implemented in the companion functions \code{dsmart} and \code{dsmartR}. It is composed of 3 columns. Columns 1 and 2 are spatial coordinates. Column 3 are soil class labels.}
 
 \references{
 \itemize{
@@ -17,10 +17,24 @@
 
 \examples{
 library(dsmart)
+library(raster)
 
+#load the relevent data
+
+#Covariates
+data(dsT_covariates)
+
+#Polygons
+data(dsT_polygons)
+
+#Map unit compositions
 data(dsT_composition)
-levels(as.factor(dsT_composition$poly))
-levels(as.factor(dsT_composition$soil_class))
+
+##Not Run
+#Run dsmart (with 15 samples per polygon, 5 C5 model realisations, using 1 compute node)
+# Incorporate addtional point observations
+#data(obsLocs)
+#dsmart(covariates = dsT_covariates, polygons = dsT_polygons, composition = dsT_composition, obsdat=obsLocs, n=15, reals = 5, cpus=1)
 
 }
 \keyword{datasets}
