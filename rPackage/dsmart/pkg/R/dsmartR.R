@@ -19,12 +19,12 @@ dsmartR<- function(rLocs= NULL, nprob = 2, sepP=FALSE, lookup= NULL, cpus=1){
   pb <- txtProgressBar(min=0, max=100, style=3)
   beginCluster(cpus)
   #setwd(rLocs)
-  dir.create("counts/",showWarnings = F)
-  dir.create("probabilities/",showWarnings = F)
-  dir.create("nProbable/",showWarnings = F)
-  strc<- paste(getwd(),"/counts/",sep="")
-  strp<- paste(getwd(),"/probabilities/",sep="")
-  strn<- paste(getwd(),"/nProbable/",sep="")
+  dir.create("dsmartOuts/summaries/counts/",showWarnings = F)
+  dir.create("dsmartOuts/summaries/probabilities/",showWarnings = F)
+  dir.create("dsmartOuts/summaries/nProbable/",showWarnings = F)
+  strc<- paste(getwd(),"/dsmartOuts/summaries/counts/",sep="")
+  strp<- paste(getwd(),"/dsmartOuts/summaries/probabilities/",sep="")
+  strn<- paste(getwd(),"/dsmartOuts/summaries/nProbable/",sep="")
   
   s1<- rLocs
   param<- nrow(lookup)
