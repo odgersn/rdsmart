@@ -52,7 +52,7 @@ dsmart<-function(covariates = NULL, polygons = NULL, composition = NULL, obsdat=
   pb <- txtProgressBar(min=0, max=reals, style=3)
   for (j in 1:reals){
     # Empty data frame to store samples
-    coordF<- matrix(NA, nrow=1000, ncol=3)
+    coordF<- matrix(NA, nrow=1000, ncol=3) #need to fix up the number of rows to better suit
     coordF<- data.frame(coordF)
     names(coordF)<- c("x", "y", "class")
     cf<- 1
@@ -62,6 +62,7 @@ dsmart<-function(covariates = NULL, polygons = NULL, composition = NULL, obsdat=
       #print(poly.id)
       # Subset a single polygon
       poly = subset(polygons, polygons@data[,1]==poly.id)
+      #randomise points within polygon
       coordF[cf:(cf+(n-1)),1:2] = as.data.frame(spsample(poly, n , type="random", iter=10))
       
       # Allocate soil classes from within map unit
@@ -70,18 +71,19 @@ dsmart<-function(covariates = NULL, polygons = NULL, composition = NULL, obsdat=
       s=rdirichlet(1, poly.comp$proportion)
       
       # Weighted-random sample
-      coordF$class[cf:(cf+(n-1))]=sample(poly.comp$soil_class, size=n, replace=TRUE, prob=s[1,])
+      coordF$class[cf:(cf+(n-1))]=as.character(sample(poly.comp$soil_class, size=n, replace=TRUE, prob=s[1,]))
       cf<- cf+n}
     
       #spatial object
       locs<- as.data.frame(coordF[complete.cases(coordF),])
       locs<- rbind(locs,obsdat) # bind sampled data with observed data
+      locs$num<- match(locs$class,lookup$name)
       coordinates(locs)<- ~ x + y  
       # Extract covariate values for the sampling locations
       values=extract(covariates,locs)
     
       #sample frame
-      samples = cbind(as.data.frame(values),as.data.frame(locs)[,3])  
+      samples = cbind(as.data.frame(values),as.data.frame(locs)[,4])  
       names(samples)[ncol(samples)]<- "soil_class"
       samples$soil_class<- as.factor(samples$soil_class)
       samples<- samples[complete.cases(samples), ]
@@ -96,6 +98,7 @@ dsmart<-function(covariates = NULL, polygons = NULL, composition = NULL, obsdat=
     
     nme<- paste(paste(paste(strg,"map",sep=""),"_",j,sep=""), ".tif", sep="")
     r1 <- clusterR(covariates, predict, args=list(res),filename=nme,format="GTiff",overwrite=T, datatype="INT2S")
+    plot(r1)
   setTxtProgressBar(pb, j)}
   
   #Save models to file
