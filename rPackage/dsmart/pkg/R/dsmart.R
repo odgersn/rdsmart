@@ -98,7 +98,7 @@ dsmart<-function(covariates = NULL, polygons = NULL, composition = NULL, obsdat=
     
     nme<- paste(paste(paste(strg,"map",sep=""),"_",j,sep=""), ".tif", sep="")
     r1 <- clusterR(covariates, predict, args=list(res),filename=nme,format="GTiff",overwrite=T, datatype="INT2S")
-    plot(r1)
+    #plot(r1)
   setTxtProgressBar(pb, j)}
   
   #Save models to file
