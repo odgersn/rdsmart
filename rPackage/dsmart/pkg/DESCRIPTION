@@ -1,13 +1,14 @@
-Package: dsmart
+Package: rdsmart
 Type: Package
 Title: Disaggregation and harmonisation of soil map units through resampled classification trees
 Version: 1.0
 Date: 2015-13-05
-Author: Nathan Odgers <nathan.odgers@sydney.edu.au> and Brendan Malone <brendan.malone@sydney.edu.au> 
-Maintainer: Brendan Malone <brendan.malone@sydney.edu.au>
+Authors@R: c(person("Nathan", "Odgers", email = "n.p.odgers@gmail.com", role = c("cre", "aut")),
+    person("Brendan", "Malone", email = "brendan.malone@sydney.edu.au", role = "aut"))
 Description: Disaggregate and harmonise of soil map units
 Depends: R (>= 3.0.1)
 Imports: raster, rgdal, sp, C50, gtools
 Suggests: rasterVis, snow
 License: GPL-2
 LazyData: no
+RoxygenNote: 6.0.1
