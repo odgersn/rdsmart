@@ -1,128 +1,122 @@
-
-
-
-#' Disaggregating and harmonising soil map units through resampled classification trees
+#' Disaggregating and harmonising soil map units through resampled
+#' classification trees
 #' 
-#' This function, together with companion function \code{dsmartR} implements
-#' the DSMART (Disaggregating and harmonising soil map units through resampled
-#' classification trees) algorithm as described in Odgers et al. (2014). This
-#' is the workhorse function that involves multiple resampling, C5 decision
-#' tree model fitting, and subsequent mapping in order to realize potential
-#' candidate soil classes within aggregated soil mapping units. There is also 
-#' added facility to incorporate point observed data into the algorithm too.
-#'
-#' @param covariates A \code{RasterStack} of \emph{scorpan} environmental
-#' covariates to both guide the C5 model fitting and provide the
-#' necessary environmental data for the spatial mapping of predicted soil
-#' classes.
-#' @param polygons See \code{data(dsT_polygons)} for an example of 
-#' requirements. Each polygon needs to have the following necessary attribute
-#' data: A numeric unique map unit identifier, a character map unit name or 
-#' code. And coupled columns of map unit classes and their respective 
-#' proportions.
-#' @param composition See \code{data(dsT_composition)} for an example of
-#' requirements. First column indicates a numeric unique map unit identifier.
-#' Second column indicates character map unit name or code. Third column 
-#' indicates map unit compositions. And fourth column indicates the percentage
-#' proportion of map unit compositions. All map unit codes and their subsequent
-#' compositions are row stacked together.
-#' @param n numeric; number of samples to take from each soil mapping polygon 
-#' for C5 model fitting.
-#' @param reals numeric; number of C5 modeling fitting and mapping realisations
-#' to implement.
-#' @param cpus numeric; number of compute nodes to use. Default is 1.
-#' @param obsdat {\code{data.frame}; Should be just 3 columns. Columns 1 and 2 
-#' are the spatial coordinates, while column 3 is the target variable class. It
-#' is assumed that the coordinates are on the same projection as the map to be
-#' disaggregated and associated covariates. It is also assumed that the 
-#' observed target variable classes correspond to the same classification level
-#' as the map unit compositions. For example MapUnit1 contains soilclassA, 
-#' soilClassB, and soilClassC; the observed data should therefore correspond to
-#' either soilclassA, soilClassB, and soilClassC etc.
-#'
-#' @return
+#' \code{dsmart} performs the spatial disaggregation of a soil choropleth map. 
+#' The underlying functions are \code{disaggregate}, which performs the spatial 
+#' downscaling, and \code{summarise}, which computes the soil class 
+#' probabilities and n-most-probable soil classes.
+#' 
+#' @param covariates A \code{RasterStack} of \emph{scorpan} environmental 
+#'   covariates to calibrate the \code{C50} classification trees against. See 
+#'   \emph{Details} for more information.
+#' @param polygons A \code{SpatialPolygonsDataFrame} containing the soil map 
+#'   unit polygons that will be disaggregated. The first field of the data frame
+#'   must be an integer that identifies each polygon.
+#' @param composition A \code{data.frame} that contains information on the 
+#'   soil-class composition of each polygon in \code{polygons}. Each row 
+#'   contains information about one soil class component of one polygon, which 
+#'   belongs to one soil map unit. First field contains the integer that 
+#'   identifies the polygon. Second field contains a code that identifies the 
+#'   soil map unit that the polygon belongs to. Third column contains a code 
+#'   that identifies the soil class. Fourth column contains a number in the 
+#'   range \code{(0, 100)} that identifies the proportion of the map unit that 
+#'   the soil class corresponds to.
+#' @param n An integer that identifies the number of virtual samples to draw 
+#'   from each polygon in each realisation.
+#' @param reals An integer that identifies the number of realisations of the 
+#'   soil class distribution that DSMART should compute.
+#' @param observations \emph{optional} A \code{data.frame} that contains actual 
+#'   observations of the soil class at locations across the soil map area. These
+#'   data augment the virtual samples and are used in each realisation. Each row
+#'   contains information about one soil class observation. First and second 
+#'   fields contain the \emph{x-} and \emph{y-}components of the observation's 
+#'   spatial location. Third field is the soil class code. See \emph{Details}.
+#' @param allocate Method of allocation of virtual samples to soil classes.
+#'   Valid values are \code{"weighted"}, for weighted-random allocation to a
+#'   soil class from within the virtual sample's map unit; 
+#'   \code{"random-mapunit"}, for completely random allocation to a soil class
+#'   from within the virtual sample's map unit; and \code{"random-all"}, for
+#'   completely random allocation to a soil class from within the entire map 
+#'   area.
+#' @param nprob At any location, disaggregated soil class predictions can be 
+#'   ranked according to their probabilities of occurence. \code{rdsmart} can 
+#'   map the class predictions, and their probabilities, at any rank. 
+#'   \code{nprob} is an integer that identifies the number of probability ranks 
+#'   to map. For example, if \code{n = 3}, DSMART will map the first-, second- 
+#'   and third-most-probable soil classes and their probabilities of occurrence.
+#' @param outputdir A character string that identifies the location of the main 
+#'   output directory. The folder \code{output} and its subfolders will be 
+#'   placed here. Default is the current working directory, \code{getwd()}.
+#' @param stub \emph{optional} A character string that identifies a short name
+#'   that will be prepended to all output.
+#' @param cpus An integer that identifies the number of CPU processors to use 
+#'   for parallel processing.
+#'   
+#' @references McBratney, A.B., Mendonca Santos, M. de L., Minasny, B., 2003. On
+#'   digital soil mapping. Geoderma 117, 3--52. doi: 
+#'   \href{http://dx.doi.org/10.1016/S0016-7061(03)00223-4}{10.1016/S0016-7061(03)00223-4}
+#'   
+#'   Odgers, N.P., McBratney, A.B., Minasny, B., Sun, W., Clifford, D., 2014. 
+#'   DSMART: An algorithm to spatially disaggregate soil map units, \emph{in:} 
+#'   Arrouays, D., McKenzie, N.J., Hempel, J.W., Richer de Forges, A., 
+#'   McBratney, A.B. (Eds.), GlobalSoilMap: Basis of the Global Spatial Soil 
+#'   Information System. Taylor & Francis, London, pp. 261--266.
+#'   
+#'   Odgers, N.P., Sun, W., McBratney, A.B., Minasny, B., Clifford, D., 2014. 
+#'   Disaggregating and harmonising soil map units through resampled 
+#'   classification trees. Geoderma 214, 91--100. doi: 
+#'   \href{http://dx.doi.org/10.1016/j.geoderma.2013.09.024}{10.1016/j.geoderma.2013.09.024}
+#'   
+#' @examples 
+#' # Load datasets
+#' data(dalrymple_composition)
+#' data(dalrymple_covariates)
+#' data(dalrymple_observations)
+#' data(dalrymple_polygons)
+#' 
+#' # Run dsmart without adding observations
+#' dsmart(dalrymple_covariates, dalrymple_polygons, dalrymple_composition,
+#'  n = 15, reals = 10, cpus = 6)
+#' 
+#' # Run dsmart with extra observations
+#' dsmart(dalrymple_covariates, dalrymple_polygons, dalrymple_composition,
+#'  observations = dalrymple_observations, n = 15, reals = 10)
+#' 
 #' @export
-#'
-#' @examples
-dsmart <- function(covariates, polygons, composition, n = 15, reals = 100, cpus = 1, obsdat = NULL)
+#' 
+dsmart <- function(covariates, polygons, composition, n = 15, reals = 100, 
+                   observations = NULL, allocate = "weighted", nprob = 3,
+                   outputdir = getwd(), stub = NULL, cpus = 1)
 {
-  # Check arguments
-  if(n < 1)
+  # Strip trailing / of outputdir, if it exists
+  if(substr(outputdir, nchar(outputdir), nchar(outputdir) + 1) == "/")
   {
-    stop("n must be greater than 0")
-  }
-  if(reals < 1)
-  {
-    stop("reals must be greater than 0")
-  }
-  if(cpus < 1)
-  {
-    stop("cpus must be greater than 0")
+    outputdir <- substr(outputdir, 1, nchar(outputdir) - 1)
   }
   
-  # Generate lookup table
-  names(composition) <- c("poly", "mapunit", "soil_class", "proportion")
-  lookup = as.data.frame(sort(unique(composition$soil_class)))
-  lookup$code = seq(from=1, to=nrow(lookup), by=1)
-  colnames(lookup) = c("name", "code")
+  # Carry out spatial disaggregation
+  disaggregate(covariates, polygons, composition, n = n, reals = reals, 
+               cpus = cpus, observations = observations, allocate = allocate, 
+               outputdir = outputdir, stub = stub)
   
-  if(!is.null(obsdat)){names(obsdat)<- c("x", "y", "class")}
-  
-  # Create subdirectories to store results in
-  #model_lists <- vector("list", reals) #empty list 
-  dir.create("output/", showWarnings = FALSE)
-  dir.create("output/realisations", showWarnings = FALSE)
-  dir.create("output/trees", showWarnings = FALSE)
-  #dir.create("output/summaries", showWarnings = FALSE)
-  
-  #strg<- paste(getwd(), "/output/rasters/", sep = "")
-  #strm<- paste(getwd(), "/output/models/", sep = "")
-  #strs<- paste(getwd(), "/output/summaries/", sep = "")
-  write.table(lookup, paste("classLookupTable.txt", sep = ""), sep = ",", col.names = TRUE, row.names = FALSE) 
-  
-  #pb <- txtProgressBar(min = 0, max = reals, style = 3)
-  
-  # Get samples for all realisations
-  message(paste0("Generating samples for ", reals, " realisations"))
-  samples <- getSamples(covariates, shp, composition, n.realisations = reals,
-                        n.samples = n, method = "weighted")
-  
-  # Write samples to text file
-  
-  for (j in 1:reals)
+  # Load realisations to RasterStack
+  realisations <- raster::stack()
+  for(filename in base::list.files(path = paste0(outputdir, "/output/realisations/"),
+                                   pattern = ".tif$", full.names = TRUE))
   {
-    message(paste0("Realisation ", j))
+    r <- raster::raster(filename)
     
-    # Extract samples for the current realisation
-    s <- samples[which(samples$r == j), ]
-    
-    # Fit classification tree
-    tree = C50::C5.0(s[, 6:ncol(s)], y = s$soil_class)
-    #model_lists[[j]] <- tree
-    
-    # Save tree to text file
-    out <- utils::capture.output(summary(tree))
-    cat(out, file = paste0("output/trees/tree_", formatC(j, width = nchar(reals), format = "d", flag = "0"), ".txt"),
-        sep = "\n", append = TRUE)
-    
-    # Save tree to rdata file
-    save(tree, file = paste0("output/trees/tree_", formatC(j, width = nchar(reals), format = "d", flag = "0"), ".RData"))
-    
-    # Predict realisation and save it to raster
-    raster::beginCluster(cpus)
-    r1 <- raster::clusterR(covariates, predict, args = list(tree),
-                           filename = paste0("output/realisations/r_", formatC(j, width = nchar(reals), format = "d", flag = "0"), ".tif"),
-                           format = "GTiff", overwrite = TRUE, datatype = "INT2S")
-    raster::endCluster()
-    #plot(r1)
-    #setTxtProgressBar(pb, j)
+    # Load raster to stack
+    realisations <- raster::stack(realisations, r)
   }
   
-  #Save models to file
-  #save(model_lists, file = paste(paste(getwd(),"/dsmartOuts/",sep=""),"dsmartModels.RData", sep="") )
+  # Load lookup table
+  lookup <- read.table(paste0(outputdir, "/output/", stub,"lookup.txt"),
+                       header = TRUE, sep = ",")
   
-  #close(pb)
-  #message(paste(paste("DSMART outputs can be located at:",getwd(), sep=" "), "/output/",sep="") )
+  # Summarise the results of the spatial disaggregation
+  summarise(realisations, lookup, n.realisations = reals, nprob = nprob,
+            cpus = cpus, outputdir = outputdir, stub = stub)
+  
+  message(paste0("DSMART outputs are located at ", outputdir))
 }
-
-#END
