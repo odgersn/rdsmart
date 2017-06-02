@@ -1,8 +1,49 @@
-#' Get samples
+#' Sample the polygons of a SpatialPolygonsDataFrame.
 #' 
+#' \code{.getVirtualSamples} samples the polygons of a SpatialPolygonsDataFrame.
+#' It accomplishes three tasks: (i) it draws samples from within each polygon, 
+#' (ii) extracts the values of the covariates at the sample locations, and (iii)
+#' through \code{.allocate}, allocates each sample to a soil class. See 
+#' \emph{Details} for more information.
 #' 
-#'
-.getVirtualSamples <- function(covariates, polygons, composition, n.realisations = 100, n.samples = 15, method = "weighted")
+#' @param covariates A \code{RasterStack} of \emph{scorpan} environmental 
+#'   covariates to calibrate the \code{C50} classification trees against. See 
+#'   \emph{Details} for more information.
+#' @param polygons A \code{SpatialPolygonsDataFrame} containing the soil map 
+#'   unit polygons that will be disaggregated. The first field of the data frame
+#'   must be an integer that identifies each polygon.
+#' @param composition A \code{data.frame} that contains information on the 
+#'   soil-class composition of each polygon in \code{polygons}. Each row 
+#'   contains information about one soil class component of one polygon, which 
+#'   belongs to one soil map unit. First field contains the integer that 
+#'   identifies the polygon. Second field contains a code that identifies the 
+#'   soil map unit that the polygon belongs to. Third column contains a code 
+#'   that identifies the soil class. Fourth column contains a number in the 
+#'   range \code{(0, 100)} that identifies the proportion of the map unit that 
+#'   the soil class corresponds to.
+#' @param n.realisations An integer that identifies the number of realisations 
+#'   of the soil class distribution that DSMART should compute.
+#' @param rate An integer that identifies the number of virtual samples to draw 
+#'   from each polygon in each realisation. If \code{method.sample =
+#'   "by_polygon"}, the number of samples to draw from each polygon in
+#'   \code{polygons}. If \code{method.sample = "by_area"}, the sampling density
+#'   in number of samples per square kilometre.
+#' @param method.sample Identifies the sampling method. Valid values are 
+#'   \code{"by_polygon"} (the default), in which case the same number of samples
+#'   are taken from each polygon; or \code{"by_area"}, in which case the number 
+#'   of samples per polygon depends on the area of the polygon.
+#' @param method.allocate Method of allocation of virtual samples to soil
+#'   classes. Valid values are \code{"weighted"}, for weighted-random allocation
+#'   to a soil class from within the virtual sample's map unit; 
+#'   \code{"random_mapunit"}, for completely random allocation to a soil class 
+#'   from within the virtual sample's map unit; and \code{"random_all"}, for 
+#'   completely random allocation to a soil class from within the entire map 
+#'   area.
+#'   
+.getVirtualSamples <- function(covariates, polygons, composition,
+                               n.realisations = 100, rate = 15,
+                               method.sample = "by_polygon", 
+                               method.allocate = "weighted", strata = NULL)
 {
   # Empty data frame to hold samples
   samples <- data.frame()
@@ -13,23 +54,96 @@
     # Subset a polygon
     poly <- subset(polygons, polygons@data[, 1] == poly.id)
     
+    # If sample = "area", determine the correct number of samples to take
+    n.samples <- 0
+    if(method.sample == "by_area")
+    {
+      # Compute area of polygon in square kilometres
+      # FOR NOW, assumes that CRS of polygons is projected and with units of m
+      area <- rgeos::gArea(poly) / 1000000
+      
+      if(area < 1.0)
+      {
+        area <- 1.0
+      }
+      
+      # Compute number of samples to take
+      n.samples <- rate * base::trunc(area)
+    }
+    else if(method.sample == "by_polygon")
+    {
+      n.samples <- rate
+    }
+    else stop("Sampling method \"", method.sample, "\" is unknown")
+    
     # Extract covariates of all grid cells that intersect with the polygon
     # Retain only those cells that do not have NA in their covariates
-    poly.cells <- as.data.frame(raster::extract(covariates, poly, cellnumbers = TRUE))
+    poly.cells <- as.data.frame(raster::extract(covariates, poly, 
+                                                cellnumbers = TRUE))
     poly.cells <- poly.cells[which(complete.cases(poly.cells)), ]
     
     # Sample grid cells with replacement for ALL realisations in one go
-    poly.samples <- poly.cells[sample(nrow(poly.cells), replace = TRUE, size = n.samples * n.realisations), ]
+    poly.samples <- poly.cells[sample(nrow(poly.cells), replace = TRUE, 
+                                      size = n.samples * n.realisations), ]
     
     # Allocate all samples to a soil class
-    soil_class <- .allocate(composition, poly.id, n = n.samples * n.realisations, method = method)
+    soil_class <- character()
+    if(method.allocate == "weighted")
+    {
+      # Weighted random allocation
+      poly.classes <- composition[which(composition[, 1] == poly.id), 3]
+      poly.weights <- composition[which(composition[, 1] == poly.id), 4]
+      
+      if(length(poly.classes) == 0)
+      {
+        stop(paste0("No map unit composition for polygon ", poly.id))
+      }
+      else
+      {
+        soil_class <- .allocate(poly.classes, n = n.samples * n.realisations, 
+                                method = "weighted", weights = poly.weights)
+      }
+    }
+    else if(method.allocate == "random-mapunit")
+    {
+      # Random-within_map unit allocation
+      poly.classes <- composition[which(composition[, 1] == poly.id), 3]
+      
+      if(length(poly.classes) == 0)
+      {
+        stop(paste0("No map unit composition for polygon ", poly.id))
+      }
+      else
+      {
+        soil_class <- .allocate(poly.classes, n = n.samples * n.realisations, 
+                                method = "random", weights = NULL)
+      }
+    }
+    else if(method.allocate == "random-all")
+    {
+      # Random-within_map allocation
+      poly.classes <- unique(composition[, 3])
+      
+      if(length(poly.classes) == 0)
+      {
+        stop("No soil classes available to allocate to")
+      }
+      else
+      {
+        soil_class <- .allocate(poly.classes, n = n.samples * n.realisations, 
+                                method = "random", weights = NULL)
+      }
+    }
+    else stop("Allocation method is unknown")
     
     # Add realisation id, spatial coordinates, soil class to sampled grid cells
     xy <- as.data.frame(raster::xyFromCell(covariates, poly.samples$cell))
-    meta <- list(r = rep(1:n.realisations, times = n.samples),
+    meta <- list(realisation = rep(1:n.realisations, times = n.samples),
                  type = base::rep("virtual", nrow(xy)),
-                 method = base::rep(method, nrow(xy)))
-    poly.samples <- cbind(as.data.frame(meta), xy, soil_class, poly.samples[, 2:ncol(poly.samples)])
+                 sampling = base::rep(method.sample, nrow(xy)),
+                 allocation = base::rep(method.allocate, nrow(xy)))
+    poly.samples <- cbind(as.data.frame(meta), xy, soil_class, 
+                          poly.samples[, 2:ncol(poly.samples)])
     
     # Add polygon samples to master data frame
     samples = rbind(samples, poly.samples)
@@ -39,64 +153,60 @@
   return(samples)
 }
 
-
 #' Allocate samples to soil classes
 #' 
-#' \code{allocate} generates a character vector of soil class codes of length \code{n}. The soil classes belong to the soil map polygon
-#' with id \code{polygon} as described in \code{composition}. The soil classes can be sampled by several different methods, as described in
-#' \emph{Details}.
+#' \code{.allocate} randomly or weighted-randomly draws a sample of size
+#' \code{n} from \code{classes}.
 #' 
-#' The default allocation method is \code{method = "weighted"}, which weighted-randomly samples the soil classes of a given polygon
-#' using the soil classes' proportions of occurrence as weights. Thus if three soil classes A, B and C are in a soil map unit in
-#' proportions of 70\%, 20\% and 10\% respectively, at each draw, class A would have a 70\% chance of being selected at random.
-#' 
-#' With \code{method = "random-mapunit"}, classes are drawn at complete random from among those that exist in the given polygon. This
-#' effectively disregards the proportion of the map unit that each class is assumed to occur in. \code{method = "random-all"} works
-#' the same way except the classes are drawn from among all those in the whole soil map, regardless of whether they occur in the given polygon
-#' or not.
-#' 
-#' @param composition A \code{data.frame} containing the soil class composition of all polygons in a choropleth soil map.
-#' @param polygon The id of the polygon from which to draw the soil classes.
-#' @param n The number of samples to draw.
-#' @param method The method of allocation. Permissible values are \code{"weighted"} (the default), \code{"random-mapunit"} and
-#' \code{"random-all"}. See \emph{Details} for information on how the modes operate.
-#'
-.allocate <- function(composition, polygon, n = 15, method = "weighted")
+#' @param classes The classes to allocate to.
+#' @param n The number of samples to allocate.
+#' @param method The method of allocation. Valid values are \code{"weighted"},
+#'   for weighted-random allocation using the weights in \code{weights}, and
+#'   \code{"random"} for random allocation (the default).
+#'   
+.allocate <- function(classes, n = 15, method = "random", weights = NULL)
 {
-  # Subset composition data frame
-  polygon.comp <- subset(composition, composition$poly == polygon)
+  if((length(classes) == 0) | (is.null(classes)))
+  {
+    stop("Classes are not specified.")
+  }
+  if(n < 1)
+  {
+    stop("n must be greater than 0.")
+  }
   
-  if(nrow(polygon.comp) > 0)
+  if (method == "weighted")
   {
-    if(method == "weighted")
+    if(is.null(weights))
     {
-      # Draw from Dirichlet distribution
-      s <- gtools::rdirichlet(1, polygon.comp$proportion)
-      
-      # Make prediction
-      classes = base::sample(polygon.comp$soil_class, size = n, replace = TRUE, prob = s[1, ])
-      
-      return(classes)
+      stop("Weighted random allocation specified but no weights supplied.")
     }
-    else if (method == "random-mapunit")
+    else if(!(length(classes) == length(weights)))
     {
-      # Make prediction
-      classes = sample(polygon.comp$soil_class, size = n, replace = TRUE)
-      
-      return(classes)
+      stop("Number of classes is not the same as number of weights.")
     }
-    else if (method == "random-all")
-    {
-      classes = sample(unique(composition$soil_class), size = n, replace = TRUE)
-      
-      return(classes)
-    }
-    else stop("mode \"", weighted, "\" is unknown")
   }
-  else
+  
+  # Perform allocation
+  allocation <- character()
+  if(method == "weighted")
   {
-    stop(paste0("No polygon composition available for polygon with id ", polygon, "."))
+    # Weighted-random allocation
+    # Draw from Dirichlet distribution
+    s <- gtools::rdirichlet(1, weights)
+    
+    # Make prediction
+    allocation = base::sample(classes, size = n, replace = TRUE, prob = s[1, ])
   }
+  else if(method == "random")
+  {
+    # Completely random allocation
+    # Make prediction
+    allocation = base::sample(classes, size = n, replace = TRUE)
+  }
+  else stop("Allocation method \"", method, "\" is unknown")
+  
+  return(allocation)
 }
 
 
@@ -113,9 +223,10 @@
   
   # Join covariates back to observations
   r <- numeric(length = nrow(observations))
-  meta <- list(r = numeric(length = nrow(observations)),
+  meta <- list(realisation = numeric(length = nrow(observations)),
                type = base::rep("actual", nrow(observations)),
-               method = base::rep("observed", nrow(observations)))
+               sampling = base::rep("observed", nrow(observations)),
+               allocation = base::rep("observed", nrow(observations)))
   obs <- cbind(as.data.frame(meta), as.data.frame(observations), o.covariates)
   
   # Return only those observations with no NA in the covariates

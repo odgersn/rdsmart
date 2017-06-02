@@ -46,8 +46,11 @@
 #'   that identifies the soil class. Fourth column contains a number in the 
 #'   range \code{(0, 100)} that identifies the proportion of the map unit that 
 #'   the soil class corresponds to.
-#' @param n An integer that identifies the number of virtual samples to draw 
-#'   from each polygon in each realisation.
+#' @param rate An integer that identifies the number of virtual samples to draw 
+#'   from each polygon in each realisation. If \code{method.sample =
+#'   "by_polygon"}, the number of samples to draw from each polygon in
+#'   \code{polygons}. If \code{method.sample = "by_area"}, the sampling density
+#'   in number of samples per square kilometre.
 #' @param reals An integer that identifies the number of realisations of the 
 #'   soil class distribution that DSMART should compute.
 #' @param observations \emph{Optional} A \code{data.frame} that contains actual 
@@ -56,17 +59,21 @@
 #'   contains information about one soil class observation. First and second 
 #'   fields contain the \emph{x-} and \emph{y-}components of the observation's 
 #'   spatial location. Third field is the soil class code. See \emph{Details}.
-#' @param allocate Method of allocation of virtual samples to soil classes.
-#'   Valid values are \code{"weighted"}, for weighted-random allocation to a
-#'   soil class from within the virtual sample's map unit; 
-#'   \code{"random-mapunit"}, for completely random allocation to a soil class
-#'   from within the virtual sample's map unit; and \code{"random-all"}, for
+#' @param method.sample Identifies the sampling method. Valid values are 
+#'   \code{"by_polygon"} (the default), in which case the same number of samples
+#'   are taken from each polygon; or \code{"by_area"}, in which case the number 
+#'   of samples per polygon depends on the area of the polygon.
+#' @param method.allocate Method of allocation of virtual samples to soil
+#'   classes. Valid values are \code{"weighted"}, for weighted-random allocation
+#'   to a soil class from within the virtual sample's map unit; 
+#'   \code{"random_mapunit"}, for completely random allocation to a soil class 
+#'   from within the virtual sample's map unit; and \code{"random_all"}, for 
 #'   completely random allocation to a soil class from within the entire map 
 #'   area.
 #' @param outputdir A character string that identifies the location of the main 
 #'   output directory. The folder \code{output} and its subfolders will be 
 #'   placed here. Default is the current working directory, \code{getwd()}.
-#' @param stub \emph{optional} A character string that identifies a short name
+#' @param stub \emph{optional} A character string that identifies a short name 
 #'   that will be prepended to all output.
 #' @param cpus An integer that identifies the number of CPU processors to use 
 #'   for parallel processing.
@@ -80,15 +87,16 @@
 #' 
 #' # Run disaggregate without adding observations
 #' disaggregate(dalrymple_covariates, dalrymple_polygons, dalrymple_composition,
-#'  n = 15, reals = 10, cpus = 6)
+#'  rate = 15, reals = 10, cpus = 6)
 #' 
 #' # Run disaggregate with extra observations
 #' disaggregate(dalrymple_covariates, dalrymple_polygons, dalrymple_composition,
-#'  observations = dalrymple_observations, n = 15, reals = 10)
+#'  observations = dalrymple_observations, rate = 15, reals = 10)
 #' 
 #' @references McBratney, A.B., Mendonca Santos, M. de L., Minasny, B., 2003. On
 #'   digital soil mapping. Geoderma 117, 3--52. doi: 
 #'   \href{http://dx.doi.org/10.1016/S0016-7061(03)00223-4}{10.1016/S0016-7061(03)00223-4}
+#'   
 #'   
 #'   Odgers, N.P., McBratney, A.B., Minasny, B., Sun, W., Clifford, D., 2014. 
 #'   DSMART: An algorithm to spatially disaggregate soil map units, \emph{in:} 
@@ -101,12 +109,14 @@
 #'   classification trees. Geoderma 214, 91--100. doi: 
 #'   \href{http://dx.doi.org/10.1016/j.geoderma.2013.09.024}{10.1016/j.geoderma.2013.09.024}
 #'   
+#'   
 #' @export
 
-disaggregate <- function(covariates, polygons, composition, n = 15,
+disaggregate <- function(covariates, polygons, composition, rate = 15,
                          reals = 100, observations = NULL,
-                         allocate = "weighted", outputdir = getwd(),
-                         stub = NULL, cpus = 1)
+                         method.sample = "by_polygon", 
+                         method.allocate = "weighted",
+                         outputdir = getwd(), stub = NULL, cpus = 1)
 {
   # Check arguments before proceeding
   messages <- c("Attention is required with the following arguments:\n")
@@ -123,7 +133,7 @@ disaggregate <- function(covariates, polygons, composition, n = 15,
   {
     messages <- append(messages, "'composition': Not a valid data.frame.\n")
   }
-  if(n <= 0)
+  if(rate <= 0)
   {
     messages <- append(messages, "'n': Value must be greater than 0.\n")
   }
@@ -162,7 +172,7 @@ disaggregate <- function(covariates, polygons, composition, n = 15,
   {
     stub <- ""
   }
-  else
+  else if(!(substr(stub, nchar(stub), nchar(stub)) == "_"))
   {
     stub <- paste0(stub, "_")
   }
@@ -178,13 +188,21 @@ disaggregate <- function(covariates, polygons, composition, n = 15,
   lookup$code = seq(from=1, to=nrow(lookup), by=1)
   colnames(lookup) = c("name", "code")
   
+  # Write lookup table to file
   write.table(lookup, paste0(outputdir, "/output/", stub,"lookup.txt"),
               sep = ",", quote = FALSE, col.names = TRUE, row.names = FALSE)
   
+  # Write covariate names to file
+  write.table(names(covariates), paste0(outputdir, "/output/", stub,
+                                        "covariate_names.txt"),
+              quote = FALSE, sep = ",", row.names = FALSE, col.names = FALSE)
+  
   # Get samples for all realisations
   message(paste0("Generating samples for ", reals, " realisations"))
-  samples <- .getVirtualSamples(covariates, polygons, composition, n.realisations = reals,
-                                n.samples = n, method = allocate)
+  samples <- .getVirtualSamples(covariates, polygons, composition,
+                                n.realisations = reals, rate = rate,
+                                method.sample = method.sample,
+                                method.allocate = method.allocate)
   
   # If there are observations, get their covariates
   if(!(is.null(observations)))
@@ -194,7 +212,8 @@ disaggregate <- function(covariates, polygons, composition, n = 15,
   }
   
   # Write samples to text file
-  write.table(rbind(samples, observations), paste0(outputdir, "/output/", stub, "samples.txt"),
+  write.table(rbind(samples, observations),
+              paste0(outputdir, "/output/", stub, "samples.txt"),
               sep = ",", quote = FALSE, col.names = TRUE, row.names = FALSE)
   
   # Process realisations
@@ -203,7 +222,7 @@ disaggregate <- function(covariates, polygons, composition, n = 15,
     message(paste0("Realisation ", j))
     
     # Extract samples for the current realisation
-    s <- samples[which(samples$r == j), ]
+    s <- samples[which(samples$realisation == j), ]
     
     # Concatenate observations if they exist
     if(!(is.null(observations)))
@@ -212,21 +231,25 @@ disaggregate <- function(covariates, polygons, composition, n = 15,
     }
     
     # Fit classification tree
-    tree = C50::C5.0(s[, 7:ncol(s)], y = s$soil_class)
+    tree = C50::C5.0(s[, 8:ncol(s)], y = s$soil_class)
     
     # Save tree to text file
     out <- utils::capture.output(summary(tree))
-    cat(out, file = paste0(outputdir, "/output/trees/", stub, "tree_", formatC(j, width = nchar(reals), format = "d", flag = "0"), ".txt"),
+    cat(out, file = paste0(outputdir, "/output/trees/", stub, "tree_",
+                           formatC(j, width = nchar(reals), format = "d",
+                                   flag = "0"), ".txt"),
         sep = "\n", append = TRUE)
     
     # Save tree to rdata file
-    save(tree, file = paste0(outputdir, "/output/trees/", stub, "tree_", formatC(j, width = nchar(reals), format = "d", flag = "0"), ".RData"))
+    save(tree, file = paste0(outputdir, "/output/trees/", stub, "tree_",
+                             formatC(j, width = nchar(reals), format = "d",
+                                     flag = "0"), ".RData"))
     
     # Predict realisation and save it to raster
     raster::beginCluster(cpus)
     r1 <- raster::clusterR(covariates, predict, args = list(tree),
-                           filename = paste0(outputdir, "/output/realisations/", stub, "r_",
-                                             formatC(j, width = nchar(reals), format = "d", flag = "0"), ".tif"),
+                           filename = paste0(outputdir, "/output/realisations/",
+                                             stub, "realisation_", formatC(j, width = nchar(reals), format = "d", flag = "0"), ".tif"),
                            format = "GTiff", overwrite = TRUE, datatype = "INT2S")
     raster::endCluster()
   }

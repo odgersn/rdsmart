@@ -1,4 +1,4 @@
-#' Disaggregating and harmonising soil map units through resampled
+#' Disaggregating and harmonising soil map units through resampled 
 #' classification trees
 #' 
 #' \code{dsmart} performs the spatial disaggregation of a soil choropleth map. 
@@ -21,8 +21,11 @@
 #'   that identifies the soil class. Fourth column contains a number in the 
 #'   range \code{(0, 100)} that identifies the proportion of the map unit that 
 #'   the soil class corresponds to.
-#' @param n An integer that identifies the number of virtual samples to draw 
-#'   from each polygon in each realisation.
+#' @param rate An integer that identifies the number of virtual samples to draw 
+#'   from each polygon in each realisation. If \code{method.sample = "by_polygon"}, the
+#'   number of samples to draw from each polygon in \code{polygons}. If 
+#'   \code{method.sample = "by_area"}, the sampling density in number of samples per 
+#'   square kilometre.
 #' @param reals An integer that identifies the number of realisations of the 
 #'   soil class distribution that DSMART should compute.
 #' @param observations \emph{optional} A \code{data.frame} that contains actual 
@@ -31,23 +34,28 @@
 #'   contains information about one soil class observation. First and second 
 #'   fields contain the \emph{x-} and \emph{y-}components of the observation's 
 #'   spatial location. Third field is the soil class code. See \emph{Details}.
-#' @param allocate Method of allocation of virtual samples to soil classes.
-#'   Valid values are \code{"weighted"}, for weighted-random allocation to a
+#' @param method.sample Identifies the sampling method. Valid values are 
+#'   \code{"by_polygon"} (the default), in which case the same number of samples
+#'   are taken from each polygon; or \code{"by_area"}, in which case the number 
+#'   of samples per polygon depends on the area of the polygon.
+#' @param method.allocate Method of allocation of virtual samples to soil classes. 
+#'   Valid values are \code{"weighted"}, for weighted-random allocation to a 
 #'   soil class from within the virtual sample's map unit; 
-#'   \code{"random-mapunit"}, for completely random allocation to a soil class
-#'   from within the virtual sample's map unit; and \code{"random-all"}, for
+#'   \code{"random_mapunit"}, for completely random allocation to a soil class 
+#'   from within the virtual sample's map unit; and \code{"random_all"}, for 
 #'   completely random allocation to a soil class from within the entire map 
 #'   area.
 #' @param nprob At any location, disaggregated soil class predictions can be 
 #'   ranked according to their probabilities of occurence. \code{rdsmart} can 
 #'   map the class predictions, and their probabilities, at any rank. 
 #'   \code{nprob} is an integer that identifies the number of probability ranks 
-#'   to map. For example, if \code{n = 3}, DSMART will map the first-, second- 
-#'   and third-most-probable soil classes and their probabilities of occurrence.
+#'   to map. For example, if \code{nprob = 3}, DSMART will map the first-,
+#'   second- and third-most-probable soil classes and their probabilities of
+#'   occurrence.
 #' @param outputdir A character string that identifies the location of the main 
 #'   output directory. The folder \code{output} and its subfolders will be 
 #'   placed here. Default is the current working directory, \code{getwd()}.
-#' @param stub \emph{optional} A character string that identifies a short name
+#' @param stub \emph{optional} A character string that identifies a short name 
 #'   that will be prepended to all output.
 #' @param cpus An integer that identifies the number of CPU processors to use 
 #'   for parallel processing.
@@ -55,6 +63,7 @@
 #' @references McBratney, A.B., Mendonca Santos, M. de L., Minasny, B., 2003. On
 #'   digital soil mapping. Geoderma 117, 3--52. doi: 
 #'   \href{http://dx.doi.org/10.1016/S0016-7061(03)00223-4}{10.1016/S0016-7061(03)00223-4}
+#'   
 #'   
 #'   Odgers, N.P., McBratney, A.B., Minasny, B., Sun, W., Clifford, D., 2014. 
 #'   DSMART: An algorithm to spatially disaggregate soil map units, \emph{in:} 
@@ -67,6 +76,7 @@
 #'   classification trees. Geoderma 214, 91--100. doi: 
 #'   \href{http://dx.doi.org/10.1016/j.geoderma.2013.09.024}{10.1016/j.geoderma.2013.09.024}
 #'   
+#'   
 #' @examples 
 #' # Load datasets
 #' data(dalrymple_composition)
@@ -76,18 +86,29 @@
 #' 
 #' # Run dsmart without adding observations
 #' dsmart(dalrymple_covariates, dalrymple_polygons, dalrymple_composition,
-#'  n = 15, reals = 10, cpus = 6)
+#'  rate = 15, reals = 10, cpus = 6)
 #' 
 #' # Run dsmart with extra observations
 #' dsmart(dalrymple_covariates, dalrymple_polygons, dalrymple_composition,
-#'  observations = dalrymple_observations, n = 15, reals = 10)
+#'  observations = dalrymple_observations, rate = 15, reals = 10)
 #' 
 #' @export
 #' 
-dsmart <- function(covariates, polygons, composition, n = 15, reals = 100, 
-                   observations = NULL, allocate = "weighted", nprob = 3,
-                   outputdir = getwd(), stub = NULL, cpus = 1)
+dsmart <- function(covariates, polygons, composition, rate = 15, reals = 100, 
+                   observations = NULL, method.sample = "by_polygon", 
+                   method.allocate = "weighted", nprob = 3, outputdir = getwd(),
+                   stub = NULL, cpus = 1)
 {
+  # Set stub to "" if NULL
+  if(is.null(stub))
+  {
+    stub <- ""
+  }
+  else if(!(substr(stub, nchar(stub), nchar(stub)) == "_"))
+  {
+    stub <- paste0(stub, "_")
+  }
+  
   # Strip trailing / of outputdir, if it exists
   if(substr(outputdir, nchar(outputdir), nchar(outputdir) + 1) == "/")
   {
@@ -95,8 +116,9 @@ dsmart <- function(covariates, polygons, composition, n = 15, reals = 100,
   }
   
   # Carry out spatial disaggregation
-  disaggregate(covariates, polygons, composition, n = n, reals = reals, 
-               cpus = cpus, observations = observations, allocate = allocate, 
+  disaggregate(covariates, polygons, composition, rate = rate, reals = reals, 
+               cpus = cpus, observations = observations,
+               method.sample = method.sample, method.allocate = method.allocate,
                outputdir = outputdir, stub = stub)
   
   # Load realisations to RasterStack

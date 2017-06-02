@@ -105,7 +105,7 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
   {
     stub <- ""
   }
-  else
+  else if(!(substr(stub, nchar(stub), nchar(stub)) == "_"))
   {
     stub <- paste0(stub, "_")
   }
@@ -140,7 +140,7 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
   for(i in 1:raster::nlayers(probs))
   {
     raster::writeRaster((probs[[i]]),
-                        filename = paste0(outputdir, "/output/probabilities/", stub, "_prob_", lookup$name[which(lookup$code == i)], ".tif"),
+                        filename = paste0(outputdir, "/output/probabilities/", stub, "prob_", lookup$name[which(lookup$code == i)], ".tif"),
                         format = "GTiff", overwrite = TRUE)
   }
   

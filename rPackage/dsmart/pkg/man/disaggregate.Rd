@@ -5,9 +5,10 @@
 \title{Disaggregating and harmonising soil map units through resampled 
 classification trees}
 \usage{
-disaggregate(covariates, polygons, composition, n = 15, reals = 100,
-  observations = NULL, allocate = "weighted", outputdir = getwd(),
-  stub = NULL, cpus = 1)
+disaggregate(covariates, polygons, composition, rate = 15, reals = 100,
+  observations = NULL, method.sample = "by_polygon",
+  method.allocate = "weighted", outputdir = getwd(), stub = NULL,
+  cpus = 1)
 }
 \arguments{
 \item{covariates}{A \code{RasterStack} of \emph{scorpan} environmental 
@@ -28,8 +29,11 @@ that identifies the soil class. Fourth column contains a number in the
 range \code{(0, 100)} that identifies the proportion of the map unit that 
 the soil class corresponds to.}
 
-\item{n}{An integer that identifies the number of virtual samples to draw 
-from each polygon in each realisation.}
+\item{rate}{An integer that identifies the number of virtual samples to draw 
+from each polygon in each realisation. If \code{method.sample =
+"by_polygon"}, the number of samples to draw from each polygon in
+\code{polygons}. If \code{method.sample = "by_area"}, the sampling density
+in number of samples per square kilometre.}
 
 \item{reals}{An integer that identifies the number of realisations of the 
 soil class distribution that DSMART should compute.}
@@ -41,11 +45,16 @@ contains information about one soil class observation. First and second
 fields contain the \emph{x-} and \emph{y-}components of the observation's 
 spatial location. Third field is the soil class code. See \emph{Details}.}
 
-\item{allocate}{Method of allocation of virtual samples to soil classes.
-Valid values are \code{"weighted"}, for weighted-random allocation to a
-soil class from within the virtual sample's map unit; 
-\code{"random-mapunit"}, for completely random allocation to a soil class
-from within the virtual sample's map unit; and \code{"random-all"}, for
+\item{method.sample}{Identifies the sampling method. Valid values are 
+\code{"by_polygon"} (the default), in which case the same number of samples
+are taken from each polygon; or \code{"by_area"}, in which case the number 
+of samples per polygon depends on the area of the polygon.}
+
+\item{method.allocate}{Method of allocation of virtual samples to soil
+classes. Valid values are \code{"weighted"}, for weighted-random allocation
+to a soil class from within the virtual sample's map unit; 
+\code{"random_mapunit"}, for completely random allocation to a soil class 
+from within the virtual sample's map unit; and \code{"random_all"}, for 
 completely random allocation to a soil class from within the entire map 
 area.}
 
@@ -53,7 +62,7 @@ area.}
 output directory. The folder \code{output} and its subfolders will be 
 placed here. Default is the current working directory, \code{getwd()}.}
 
-\item{stub}{\emph{optional} A character string that identifies a short name
+\item{stub}{\emph{optional} A character string that identifies a short name 
 that will be prepended to all output.}
 
 \item{cpus}{An integer that identifies the number of CPU processors to use 
@@ -100,17 +109,18 @@ data(dalrymple_polygons)
 
 # Run disaggregate without adding observations
 disaggregate(dalrymple_covariates, dalrymple_polygons, dalrymple_composition,
- n = 15, reals = 10, cpus = 6)
+ rate = 15, reals = 10, cpus = 6)
 
 # Run disaggregate with extra observations
 disaggregate(dalrymple_covariates, dalrymple_polygons, dalrymple_composition,
- observations = dalrymple_observations, n = 15, reals = 10)
+ observations = dalrymple_observations, rate = 15, reals = 10)
 
 }
 \references{
 McBratney, A.B., Mendonca Santos, M. de L., Minasny, B., 2003. On
   digital soil mapping. Geoderma 117, 3--52. doi: 
   \href{http://dx.doi.org/10.1016/S0016-7061(03)00223-4}{10.1016/S0016-7061(03)00223-4}
+  
   
   Odgers, N.P., McBratney, A.B., Minasny, B., Sun, W., Clifford, D., 2014. 
   DSMART: An algorithm to spatially disaggregate soil map units, \emph{in:} 
