@@ -104,9 +104,13 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
   if(is.null(stub))
   {
     stub <- ""
-  }
-  else if(!(substr(stub, nchar(stub), nchar(stub)) == "_"))
-  {
+    
+  } else if (stub == "") {
+    
+    stub <- ""
+    
+  } else if(!(substr(stub, nchar(stub), nchar(stub)) == "_")) {
+    
     stub <- paste0(stub, "_")
   }
   

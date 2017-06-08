@@ -1,8 +1,8 @@
 Package: rdsmart
 Type: Package
 Title: Disaggregation and harmonisation of soil map units through resampled classification trees
-Version: 1.0
-Date: 2017-05-18
+Version: 2.0
+Date: 2017-06-08
 Authors@R: c(person("Nathan", "Odgers", email = "n.p.odgers@gmail.com", role = c("cre", "aut")),
     person("Brendan", "Malone", email = "brendan.malone@sydney.edu.au", role = "aut"))
 Description: Disaggregate and harmonise of soil map units

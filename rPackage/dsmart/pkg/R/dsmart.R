@@ -17,15 +17,24 @@
 #'   contains information about one soil class component of one polygon, which 
 #'   belongs to one soil map unit. First field contains the integer that 
 #'   identifies the polygon. Second field contains a code that identifies the 
-#'   soil map unit that the polygon belongs to. Third column contains a code 
-#'   that identifies the soil class. Fourth column contains a number in the 
-#'   range \code{(0, 100)} that identifies the proportion of the map unit that 
-#'   the soil class corresponds to.
+#'   soil map unit that the polygon belongs to.
+#'   
+#'   If \code{strata = NULL} (the default), third column contains a code that 
+#'   identifies the soil class and fourth column contains a number in the range 
+#'   \code{(0, 100)} that identifies the proportion of the \strong{map unit} 
+#'   that the soil class corresponds to. See the example data 
+#'   \code{data(dalrymple_composition)}.
+#'   
+#'   If \code{strata} is a \code{RasterLayer}, third column contains an integer 
+#'   that identifies the stratum in \code{strata}, fourth column contains a code
+#'   that identifies the soil class and fifth column contains a number in the
+#'   range \code{(0, 100)} that identifies the proportion of the
+#'   \strong{stratum} that the soil class corresponds to.
 #' @param rate An integer that identifies the number of virtual samples to draw 
-#'   from each polygon in each realisation. If \code{method.sample = "by_polygon"}, the
-#'   number of samples to draw from each polygon in \code{polygons}. If 
-#'   \code{method.sample = "by_area"}, the sampling density in number of samples per 
-#'   square kilometre.
+#'   from each polygon in each realisation. If \code{method.sample = 
+#'   "by_polygon"}, the number of samples to draw from each polygon in 
+#'   \code{polygons}. If \code{method.sample = "by_area"}, the sampling density 
+#'   in number of samples per square kilometre.
 #' @param reals An integer that identifies the number of realisations of the 
 #'   soil class distribution that DSMART should compute.
 #' @param observations \emph{optional} A \code{data.frame} that contains actual 
@@ -38,19 +47,25 @@
 #'   \code{"by_polygon"} (the default), in which case the same number of samples
 #'   are taken from each polygon; or \code{"by_area"}, in which case the number 
 #'   of samples per polygon depends on the area of the polygon.
-#' @param method.allocate Method of allocation of virtual samples to soil classes. 
-#'   Valid values are \code{"weighted"}, for weighted-random allocation to a 
-#'   soil class from within the virtual sample's map unit; 
+#' @param method.allocate Method of allocation of virtual samples to soil 
+#'   classes. Valid values are \code{"weighted"}, for weighted-random allocation
+#'   to a soil class from within the virtual sample's map unit; 
 #'   \code{"random_mapunit"}, for completely random allocation to a soil class 
 #'   from within the virtual sample's map unit; and \code{"random_all"}, for 
 #'   completely random allocation to a soil class from within the entire map 
 #'   area.
+#' @param strata \emph{optional} An integer-valued \code{RasterLayer} that will 
+#'   be used to stratify the allocation of virtual samples to soil classes. 
+#'   Integer values could represent classes of slope position (e.g. crest, 
+#'   backslope, footslope, etc.) or land use (e.g. cropland, native vegetation, 
+#'   etc.) or some other variable deemed to be an important discriminator of the
+#'   occurrence of soil classes within a map unit.
 #' @param nprob At any location, disaggregated soil class predictions can be 
 #'   ranked according to their probabilities of occurence. \code{rdsmart} can 
 #'   map the class predictions, and their probabilities, at any rank. 
 #'   \code{nprob} is an integer that identifies the number of probability ranks 
-#'   to map. For example, if \code{nprob = 3}, DSMART will map the first-,
-#'   second- and third-most-probable soil classes and their probabilities of
+#'   to map. For example, if \code{nprob = 3}, DSMART will map the first-, 
+#'   second- and third-most-probable soil classes and their probabilities of 
 #'   occurrence.
 #' @param outputdir A character string that identifies the location of the main 
 #'   output directory. The folder \code{output} and its subfolders will be 
@@ -65,6 +80,10 @@
 #'   \href{http://dx.doi.org/10.1016/S0016-7061(03)00223-4}{10.1016/S0016-7061(03)00223-4}
 #'   
 #'   
+#'   
+#'   
+#'   
+#'   
 #'   Odgers, N.P., McBratney, A.B., Minasny, B., Sun, W., Clifford, D., 2014. 
 #'   DSMART: An algorithm to spatially disaggregate soil map units, \emph{in:} 
 #'   Arrouays, D., McKenzie, N.J., Hempel, J.W., Richer de Forges, A., 
@@ -75,6 +94,10 @@
 #'   Disaggregating and harmonising soil map units through resampled 
 #'   classification trees. Geoderma 214, 91--100. doi: 
 #'   \href{http://dx.doi.org/10.1016/j.geoderma.2013.09.024}{10.1016/j.geoderma.2013.09.024}
+#'   
+#'   
+#'   
+#'   
 #'   
 #'   
 #' @examples 
@@ -96,16 +119,20 @@
 #' 
 dsmart <- function(covariates, polygons, composition, rate = 15, reals = 100, 
                    observations = NULL, method.sample = "by_polygon", 
-                   method.allocate = "weighted", nprob = 3, outputdir = getwd(),
-                   stub = NULL, cpus = 1)
+                   method.allocate = "weighted", strata = NULL, nprob = 3,
+                   outputdir = getwd(), stub = NULL, cpus = 1)
 {
   # Set stub to "" if NULL
   if(is.null(stub))
   {
     stub <- ""
-  }
-  else if(!(substr(stub, nchar(stub), nchar(stub)) == "_"))
-  {
+    
+  } else if (stub == "") {
+  
+    stub <- ""
+    
+  } else if(!(substr(stub, nchar(stub), nchar(stub)) == "_")) {
+    
     stub <- paste0(stub, "_")
   }
   
@@ -119,7 +146,7 @@ dsmart <- function(covariates, polygons, composition, rate = 15, reals = 100,
   disaggregate(covariates, polygons, composition, rate = rate, reals = reals, 
                cpus = cpus, observations = observations,
                method.sample = method.sample, method.allocate = method.allocate,
-               outputdir = outputdir, stub = stub)
+               strata = strata, outputdir = outputdir, stub = stub)
   
   # Load realisations to RasterStack
   realisations <- raster::stack()

@@ -43,7 +43,7 @@
 .getVirtualSamples <- function(covariates, polygons, composition,
                                n.realisations = 100, rate = 15,
                                method.sample = "by_polygon", 
-                               method.allocate = "weighted", strata = NULL)
+                               method.allocate = "weighted")
 {
   # Empty data frame to hold samples
   samples <- data.frame()
@@ -56,8 +56,8 @@
     
     # If sample = "area", determine the correct number of samples to take
     n.samples <- 0
-    if(method.sample == "by_area")
-    {
+    if(method.sample == "by_area") {
+    
       # Compute area of polygon in square kilometres
       # FOR NOW, assumes that CRS of polygons is projected and with units of m
       area <- rgeos::gArea(poly) / 1000000
@@ -69,12 +69,9 @@
       
       # Compute number of samples to take
       n.samples <- rate * base::trunc(area)
-    }
-    else if(method.sample == "by_polygon")
-    {
+    } else if(method.sample == "by_polygon") {
       n.samples <- rate
-    }
-    else stop("Sampling method \"", method.sample, "\" is unknown")
+    } else stop("Sampling method \"", method.sample, "\" is unknown")
     
     # Extract covariates of all grid cells that intersect with the polygon
     # Retain only those cells that do not have NA in their covariates
@@ -88,53 +85,38 @@
     
     # Allocate all samples to a soil class
     soil_class <- character()
-    if(method.allocate == "weighted")
-    {
+    if(method.allocate == "weighted") {
       # Weighted random allocation
-      poly.classes <- composition[which(composition[, 1] == poly.id), 3]
+      poly.classes <- as.character(composition[which(composition[, 1] == poly.id), 3])
       poly.weights <- composition[which(composition[, 1] == poly.id), 4]
       
-      if(length(poly.classes) == 0)
-      {
+      if(length(poly.classes) == 0) {
         stop(paste0("No map unit composition for polygon ", poly.id))
-      }
-      else
-      {
+      } else {
         soil_class <- .allocate(poly.classes, n = n.samples * n.realisations, 
                                 method = "weighted", weights = poly.weights)
       }
-    }
-    else if(method.allocate == "random-mapunit")
-    {
+    } else if(method.allocate == "random-mapunit") {
       # Random-within_map unit allocation
-      poly.classes <- composition[which(composition[, 1] == poly.id), 3]
+      poly.classes <- as.character(composition[which(composition[, 1] == poly.id), 3])
       
-      if(length(poly.classes) == 0)
-      {
+      if(length(poly.classes) == 0) {
         stop(paste0("No map unit composition for polygon ", poly.id))
-      }
-      else
-      {
+      } else {
         soil_class <- .allocate(poly.classes, n = n.samples * n.realisations, 
                                 method = "random", weights = NULL)
       }
-    }
-    else if(method.allocate == "random-all")
-    {
+    } else if(method.allocate == "random-all") {
       # Random-within_map allocation
-      poly.classes <- unique(composition[, 3])
+      poly.classes <- as.character(unique(composition[, 3]))
       
-      if(length(poly.classes) == 0)
-      {
+      if(length(poly.classes) == 0) {
         stop("No soil classes available to allocate to")
-      }
-      else
-      {
+      } else {
         soil_class <- .allocate(poly.classes, n = n.samples * n.realisations, 
                                 method = "random", weights = NULL)
       }
-    }
-    else stop("Allocation method is unknown")
+    } else stop("Allocation method is unknown")
     
     # Add realisation id, spatial coordinates, soil class to sampled grid cells
     xy <- as.data.frame(raster::xyFromCell(covariates, poly.samples$cell))
@@ -153,6 +135,128 @@
   return(samples)
 }
 
+#'Sample the polygons of a SpatialPolygonsDataFrame.
+#'
+#'
+.getStratifiedVirtualSamples <- function(covariates, polygons, composition, strata,
+                                     n.realisations = 100, rate = 15,
+                                     method.sample = "by_polygon", 
+                                     method.allocate = "weighted")
+{
+  # Make sure composition column names are formatted properly
+  if(ncol(composition) == 4) {
+    names(composition) <- c("poly", "mapunit", "soil_class", "proportion")
+  } else if (ncol(composition) == 5) {
+    names(composition) <- c("poly", "mapunit", "stratum", "soil_class", "proportion")
+  } else stop("Map unit composition in unknown format.")
+  
+  # Empty data frame to hold samples
+  samples <- data.frame()
+  
+  # Process each polygon in polygons
+  for(poly.id in polygons@data[, 1])
+  {
+    # Subset a polygon
+    poly <- subset(polygons, polygons@data[, 1] == poly.id)
+    
+    # If sample = "area", determine the correct number of samples to take
+    n.samples <- 0
+    if(method.sample == "by_area") {
+      # Compute area of polygon in square kilometres
+      # FOR NOW, assumes that CRS of polygons is projected and with units of m
+      area <- rgeos::gArea(poly) / 1000000
+      
+      if(area < 1.0)
+      {
+        area <- 1.0
+      }
+      
+      # Compute number of samples to take
+      n.samples <- rate * base::trunc(area)
+    } else if(method.sample == "by_polygon") {
+      n.samples <- rate
+    } else stop("Sampling method \"", method.sample, "\" is unknown")
+    
+    # Extract covariates of all grid cells that intersect with the polygon
+    # Retain only those cells that do not have NA in their covariates
+    poly.cells <- as.data.frame(raster::extract(covariates, poly, cellnumbers = TRUE))
+    poly.cells <- poly.cells[which(complete.cases(poly.cells)), ]
+    
+    # Sample grid cells with replacement for ALL realisations in one go
+    poly.samples <- poly.cells[sample(nrow(poly.cells), replace = TRUE, size = n.samples * n.realisations), ]
+    
+    # Get coordinates of sampled grid cells
+    xy <- as.data.frame(raster::xyFromCell(covariates, poly.samples$cell))
+    
+    # Determine what strata they belong to
+    poly.samples.strata <- extract(strata, xy)
+    
+    # Allocate soils within strata
+    poly.samples <- cbind(poly.samples.strata, poly.samples[, 2:ncol(poly.samples)])
+    names(poly.samples)[names(poly.samples) == "poly.samples.strata"] <- "stratum"
+    poly.samples <- poly.samples[order(poly.samples$stratum), ]
+    
+    soil_class <- character()
+    for(stratum in unique(poly.samples[, 1]))
+    {
+      # Work out the number of samples to allocate
+      stratum.n <- length(which(poly.samples[, 1] == stratum))
+      
+      # Candidate classes
+      stratum.classes <- as.character(composition[which((composition$poly == poly.id) & (composition$stratum == stratum)), 4])
+      
+      if(length(stratum.classes) == 0) {
+        
+        stop(paste0("No classes available in stratum ", stratum, " of polygon ", poly.id))
+        
+      } else if(method.allocate == "weighted") {
+        
+        # Weighted-random allocation within stratum
+        if(!(ncol(composition) == 5)) {
+          
+        stop("Weighted-random allocation specified but no stratum weights available.")
+          
+        } else {
+        # Class weights (proportions)
+        stratum.weights <- composition[which((composition$poly == poly.id) & (composition$stratum == stratum)), 5]
+          
+        # Perform allocation
+        alloc <- .allocate(stratum.classes, n = stratum.n, method = "weighted",
+                           weights = stratum.weights)
+          
+        soil_class <- append(soil_class, alloc)
+          
+        } 
+      } else if(method.allocate == "random") {
+          
+        # Completely random allocation within stratum
+          
+        # Perform allocation
+        alloc <- .allocate(stratum.classes, n = stratum.n, method = "random")
+        soil_class <- append(soil_class, alloc)
+      }
+    }
+    
+    # Attach soil classes to samples
+    poly.samples <- cbind(xy, soil_class, poly.samples[, 1:ncol(poly.samples)])
+    
+    # Shuffle samples row-wise so that they're not in order of stratum
+    poly.samples <- poly.samples[base::sample(nrow(poly.samples)), ]
+    
+    # Add realisation id, spatial coordinates, soil class to sampled grid cells
+    meta <- list(realisation = rep(1:n.realisations, times = n.samples),
+                 type = base::rep("virtual", nrow(xy)),
+                 sampling = base::rep(method.sample, nrow(xy)),
+                 allocation = base::rep(method.allocate, nrow(xy)))
+    poly.samples <- cbind(as.data.frame(meta), poly.samples)
+    
+    # Add polygon samples to master data frame
+    samples = rbind(samples, poly.samples)
+    
+  }
+  return(samples)
+}
+
 #' Allocate samples to soil classes
 #' 
 #' \code{.allocate} randomly or weighted-randomly draws a sample of size
@@ -163,7 +267,7 @@
 #' @param method The method of allocation. Valid values are \code{"weighted"},
 #'   for weighted-random allocation using the weights in \code{weights}, and
 #'   \code{"random"} for random allocation (the default).
-#'   
+#'
 .allocate <- function(classes, n = 15, method = "random", weights = NULL)
 {
   if((length(classes) == 0) | (is.null(classes)))
@@ -222,7 +326,6 @@
   o.covariates <- raster::extract(covariates, observations)
   
   # Join covariates back to observations
-  r <- numeric(length = nrow(observations))
   meta <- list(realisation = numeric(length = nrow(observations)),
                type = base::rep("actual", nrow(observations)),
                sampling = base::rep("observed", nrow(observations)),

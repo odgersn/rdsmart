@@ -42,14 +42,23 @@
 #'   contains information about one soil class component of one polygon, which 
 #'   belongs to one soil map unit. First field contains the integer that 
 #'   identifies the polygon. Second field contains a code that identifies the 
-#'   soil map unit that the polygon belongs to. Third column contains a code 
-#'   that identifies the soil class. Fourth column contains a number in the 
-#'   range \code{(0, 100)} that identifies the proportion of the map unit that 
-#'   the soil class corresponds to.
+#'   soil map unit that the polygon belongs to.
+#'   
+#'   If \code{strata = NULL} (the default), third column contains a code that 
+#'   identifies the soil class and fourth column contains a number in the range 
+#'   \code{(0, 100)} that identifies the proportion of the \strong{map unit} 
+#'   that the soil class corresponds to. See the example data 
+#'   \code{data(dalrymple_composition)}.
+#'   
+#'   If \code{strata} is a \code{RasterLayer}, third column contains an integer 
+#'   that identifies the stratum in \code{strata}, fourth column contains a code
+#'   that identifies the soil class and fifth column contains a number in the 
+#'   range \code{(0, 100)} that identifies the proportion of the 
+#'   \strong{stratum} that the soil class corresponds to.
 #' @param rate An integer that identifies the number of virtual samples to draw 
-#'   from each polygon in each realisation. If \code{method.sample =
-#'   "by_polygon"}, the number of samples to draw from each polygon in
-#'   \code{polygons}. If \code{method.sample = "by_area"}, the sampling density
+#'   from each polygon in each realisation. If \code{method.sample = 
+#'   "by_polygon"}, the number of samples to draw from each polygon in 
+#'   \code{polygons}. If \code{method.sample = "by_area"}, the sampling density 
 #'   in number of samples per square kilometre.
 #' @param reals An integer that identifies the number of realisations of the 
 #'   soil class distribution that DSMART should compute.
@@ -63,13 +72,19 @@
 #'   \code{"by_polygon"} (the default), in which case the same number of samples
 #'   are taken from each polygon; or \code{"by_area"}, in which case the number 
 #'   of samples per polygon depends on the area of the polygon.
-#' @param method.allocate Method of allocation of virtual samples to soil
+#' @param method.allocate Method of allocation of virtual samples to soil 
 #'   classes. Valid values are \code{"weighted"}, for weighted-random allocation
 #'   to a soil class from within the virtual sample's map unit; 
 #'   \code{"random_mapunit"}, for completely random allocation to a soil class 
 #'   from within the virtual sample's map unit; and \code{"random_all"}, for 
 #'   completely random allocation to a soil class from within the entire map 
 #'   area.
+#' @param strata \emph{optional} An integer-valued \code{RasterLayer} that will 
+#'   be used to stratify the allocation of virtual samples to soil classes. 
+#'   Integer values could represent classes of slope position (e.g. crest, 
+#'   backslope, footslope, etc.) or land use (e.g. cropland, native vegetation, 
+#'   etc.) or some other variable deemed to be an important discriminator of the
+#'   occurrence of soil classes within a map unit.
 #' @param outputdir A character string that identifies the location of the main 
 #'   output directory. The folder \code{output} and its subfolders will be 
 #'   placed here. Default is the current working directory, \code{getwd()}.
@@ -98,6 +113,10 @@
 #'   \href{http://dx.doi.org/10.1016/S0016-7061(03)00223-4}{10.1016/S0016-7061(03)00223-4}
 #'   
 #'   
+#'   
+#'   
+#'   
+#'   
 #'   Odgers, N.P., McBratney, A.B., Minasny, B., Sun, W., Clifford, D., 2014. 
 #'   DSMART: An algorithm to spatially disaggregate soil map units, \emph{in:} 
 #'   Arrouays, D., McKenzie, N.J., Hempel, J.W., Richer de Forges, A., 
@@ -110,12 +129,16 @@
 #'   \href{http://dx.doi.org/10.1016/j.geoderma.2013.09.024}{10.1016/j.geoderma.2013.09.024}
 #'   
 #'   
+#'   
+#'   
+#'   
+#'   
 #' @export
 
 disaggregate <- function(covariates, polygons, composition, rate = 15,
                          reals = 100, observations = NULL,
                          method.sample = "by_polygon", 
-                         method.allocate = "weighted",
+                         method.allocate = "weighted", strata = NULL,
                          outputdir = getwd(), stub = NULL, cpus = 1)
 {
   # Check arguments before proceeding
@@ -154,7 +177,14 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
   }
   if(!(file.exists(outputdir)))
   {
-    messages <- append(messages, "'outputdir': Output directory does not exist.")
+    messages <- append(messages, "'outputdir': Output directory does not exist.\n")
+  }
+  if(!(is.null(strata)))
+  {
+    if(!(class(strata) == "RasterLayer"))
+    {
+      messages <- append(messages, "'strata': Not a valid RasterLayer.\n")
+    }
   }
   if(length(messages) > 1)
   {
@@ -171,9 +201,13 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
   if(is.null(stub))
   {
     stub <- ""
-  }
-  else if(!(substr(stub, nchar(stub), nchar(stub)) == "_"))
-  {
+    
+  } else if (stub == "") {
+    
+    stub <- ""
+    
+  } else if(!(substr(stub, nchar(stub), nchar(stub)) == "_")) {
+    
     stub <- paste0(stub, "_")
   }
   
@@ -183,7 +217,12 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
   dir.create(paste0(outputdir, "/output/trees"), showWarnings = FALSE)
   
   # Generate lookup table
-  names(composition) <- c("poly", "mapunit", "soil_class", "proportion")
+  if(!(is.null(strata))) {
+    names(composition) <- c("poly", "mapunit", "stratum", "soil_class", "proportion")
+  } else {
+    names(composition) <- c("poly", "mapunit", "soil_class", "proportion")
+  }
+  
   lookup = as.data.frame(sort(unique(composition$soil_class)))
   lookup$code = seq(from=1, to=nrow(lookup), by=1)
   colnames(lookup) = c("name", "code")
@@ -199,21 +238,36 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
   
   # Get samples for all realisations
   message(paste0("Generating samples for ", reals, " realisations"))
-  samples <- .getVirtualSamples(covariates, polygons, composition,
-                                n.realisations = reals, rate = rate,
-                                method.sample = method.sample,
-                                method.allocate = method.allocate)
+  samples <- data.frame()
+  
+  if(is.null(strata))
+  {
+    # Get samples without allocation stratification
+    samples <- .getVirtualSamples(covariates, polygons, composition,
+                                  n.realisations = reals, rate = rate,
+                                  method.sample = method.sample,
+                                  method.allocate = method.allocate)
+  } else {
+    samples <- .getStratifiedVirtualSamples(covariates, polygons, composition,
+                                            strata, n.realisations = reals,
+                                            rate = rate, 
+                                            method.sample = method.sample, 
+                                            method.allocate = method.allocate)
+  }
   
   # If there are observations, get their covariates
   if(!(is.null(observations)))
   { 
     names(observations) <- c("x", "y", "class")
     observations <- .observations(observations, covariates)
+    write.table(observations, paste0(outputdir, "/output/", stub,
+                                     "observations_with_covariates.txt"),
+                sep = ",", quote = FALSE, col.names = TRUE, row.names = FALSE)
   }
   
   # Write samples to text file
-  write.table(rbind(samples, observations),
-              paste0(outputdir, "/output/", stub, "samples.txt"),
+  write.table(samples, paste0(outputdir, "/output/", stub,
+                              "virtual_samples.txt"),
               sep = ",", quote = FALSE, col.names = TRUE, row.names = FALSE)
   
   # Process realisations
@@ -221,17 +275,28 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
   {
     message(paste0("Realisation ", j))
     
-    # Extract samples for the current realisation
-    s <- samples[which(samples$realisation == j), ]
+    # Column number of samples' first covariate
+    startcol <- numeric(0)
+    if(is.null(strata))
+    {
+      startcol = 8
+    } else {
+      startcol = 9
+    }
+    
+    # Extract sample covariates for the current realisation
+    s <- samples[which(samples$realisation == j), startcol:ncol(samples)]
+    soil_class <- samples$soil_class[which(samples$realisation == j)]
     
     # Concatenate observations if they exist
     if(!(is.null(observations)))
     {
-      s <- rbind(s, observations)
+      s <- rbind(s, observations[, 8:ncol(observations)])
+      soil_class <- append(soil_class, observations$soil_class)
     }
-    
+
     # Fit classification tree
-    tree = C50::C5.0(s[, 8:ncol(s)], y = s$soil_class)
+    tree = C50::C5.0(s, y = soil_class)
     
     # Save tree to text file
     out <- utils::capture.output(summary(tree))
