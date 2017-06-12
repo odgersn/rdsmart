@@ -115,8 +115,12 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
   }
   
   # Set up output directories
+  dir.create(paste0(outputdir, "/output/"), showWarnings = FALSE)
   dir.create(paste0(outputdir, "/output/probabilities/"), showWarnings = FALSE)
   dir.create(paste0(outputdir, "/output/mostprobable/"), showWarnings = FALSE)
+  
+  # Make sure lookup table column names are correct
+  names(lookup) <- c("name", "code")
   
   # Parameter to pass to counts function as a global variable
   param <- nrow(lookup)
