@@ -223,14 +223,6 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
     names(composition) <- c("poly", "mapunit", "soil_class", "proportion")
   }
   
-  lookup = as.data.frame(sort(unique(composition$soil_class)))
-  lookup$code = seq(from=1, to=nrow(lookup), by=1)
-  colnames(lookup) = c("name", "code")
-  
-  # Write lookup table to file
-  write.table(lookup, paste0(outputdir, "/output/", stub,"lookup.txt"),
-              sep = ",", quote = FALSE, col.names = TRUE, row.names = FALSE)
-  
   # Write covariate names to file
   write.table(names(covariates), paste0(outputdir, "/output/", stub,
                                         "covariate_names.txt"),
@@ -297,6 +289,17 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
 
     # Fit classification tree
     tree = C50::C5.0(s, y = soil_class)
+    
+    # Generate lookup table
+    lookup = as.data.frame(tree$levels)
+    lookup$code = seq(from=1, to=nrow(lookup), by=1)
+    colnames(lookup) = c("name", "code")
+    
+    # Write lookup table to file
+    write.table(lookup, paste0(outputdir, "/output/trees/", stub,"lookup_",
+                               formatC(j, width = nchar(reals), format = "d",
+                                       flag = "0"), ".txt"),
+                sep = ",", quote = FALSE, col.names = TRUE, row.names = FALSE)
     
     # Save tree to text file
     out <- utils::capture.output(summary(tree))
