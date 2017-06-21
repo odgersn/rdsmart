@@ -262,6 +262,34 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
                               "virtual_samples.txt"),
               sep = ",", quote = FALSE, col.names = TRUE, row.names = FALSE)
   
+  # We submit the target classes to C5.0 as a factor. To do that, we need to 
+  # make sure that the factor has the full set of levels, since due to the 
+  # randomness of the allocation procedure we can't assume that they are all
+  # represented in the samples drawn for a particular realisation. If the levels
+  # are not specified correctly and they are not all represented in all sets of
+  # samples, it is possible that the integer values that the class predictions
+  # are coded to by raster::predict will not refer to the same soil class from
+  # realisation to realisation.
+  levs <- as.character(unique(composition$soil_class))
+  
+  if(!(is.null(observations)))
+  {
+    # Union map unit levels with observation levels
+    levs <- base::union(levs, as.character(unique(observations$soil_class)))
+  }
+  
+  # Sort levels
+  levs <- sort(levs)
+  
+  # Generate lookup table
+  lookup = as.data.frame(levs)
+  lookup$code = seq(from=1, to=nrow(lookup), by=1)
+  colnames(lookup) = c("name", "code")
+  
+  # Write lookup table to file
+  write.table(lookup, paste0(outputdir, "/output/", stub,"lookup.txt"),
+              sep = ",", quote = FALSE, col.names = TRUE, row.names = FALSE)
+  
   # Process realisations
   for (j in 1:reals)
   {
@@ -278,28 +306,20 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
     
     # Extract sample covariates for the current realisation
     s <- samples[which(samples$realisation == j), startcol:ncol(samples)]
-    soil_class <- samples$soil_class[which(samples$realisation == j)]
+    soil_class <- as.character(samples$soil_class[which(samples$realisation == j)])
     
     # Concatenate observations if they exist
     if(!(is.null(observations)))
     {
       s <- rbind(s, observations[, 8:ncol(observations)])
-      soil_class <- append(soil_class, observations$soil_class)
+      soil_class <- append(soil_class, as.character(observations$soil_class))
     }
+    
+    # Sort levels and convert soil_class back to factor
+    soil_class <- base::factor(soil_class, levels = levs)
 
     # Fit classification tree
     tree = C50::C5.0(s, y = soil_class)
-    
-    # Generate lookup table
-    lookup = as.data.frame(tree$levels)
-    lookup$code = seq(from=1, to=nrow(lookup), by=1)
-    colnames(lookup) = c("name", "code")
-    
-    # Write lookup table to file
-    write.table(lookup, paste0(outputdir, "/output/trees/", stub,"lookup_",
-                               formatC(j, width = nchar(reals), format = "d",
-                                       flag = "0"), ".txt"),
-                sep = ",", quote = FALSE, col.names = TRUE, row.names = FALSE)
     
     # Save tree to text file
     out <- utils::capture.output(summary(tree))
