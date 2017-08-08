@@ -1,110 +1,171 @@
-#Purpose: dsmart - disaggregation and harmonisation of soil map units through resampled classification trees
-#Maintainer: Nathan Odgers (nathan.odgers@sydney.edu.au); Brendan Malone (brendan.malone@sydney.edu.au)
-#Note: Algorithm described in [doi:10.1016/j.geoderma.2013.09.024]
-
-#Basic description
-# Randomly samples spatial polygons and builds a See5 classification tree
-# with the sampling points.
-#
-# Args:
-#   covariates: A RasterStack of covariate layers.
-#   polygons: A SpatialPolygonsDataFrame containing the polygons to be
-#      randomly sampled.
-#   composition: A data frame containing the map unit composition for each
-#      map unit polygon. First column is the polygon number (corresponding
-#      to the first field of the SpatialPolygonsDataFrame attribute table);
-#      second column is the map unit code; third column is the soil class
-#      code; fourth column is the areal proportion of the map unit the soil
-#      class is assumed to occupy.
-#   n: The number of samples to draw from each polygon.
-#   reals: Number of model resamplings to execute
-#   cpus: Number of compute nodes to use
-
-# Returns:
-#   A number of items saved to file:
-#          1. R date object that holds to model parameters from each fitted C5 model
-#          2. Text files of the model summary output from each fitted C5 model
-#          3. Rasters of each C5 model realisation. 
-#          4. class and unique number lookup table
-#   
-
-
-dsmart<-function(covariates = NULL, polygons = NULL, composition = NULL, obsdat=NULL, n=NULL, reals = NULL, cpus=1){
-  beginCluster(cpus)
-  # Generate lookup table
-  names(composition)<- c("poly", "mapunit", "soil_class", "proportion")
-  lookup = as.data.frame(sort(unique(composition$soil_class)))
-  lookup$code = seq(from=1, to=nrow(lookup), by=1)
-  colnames(lookup) = c("name", "code")
-  if(!is.null(obsdat)){names(obsdat)<- c("x", "y", "class")}
+#' Disaggregating and harmonising soil map units through resampled 
+#' classification trees
+#' 
+#' \code{dsmart} performs the spatial disaggregation of a soil choropleth map. 
+#' The underlying functions are \code{disaggregate}, which performs the spatial 
+#' downscaling, and \code{summarise}, which computes the soil class 
+#' probabilities and n-most-probable soil classes.
+#' 
+#' @param covariates A \code{RasterStack} of \emph{scorpan} environmental 
+#'   covariates to calibrate the \code{C50} classification trees against. See 
+#'   \emph{Details} for more information.
+#' @param polygons A \code{SpatialPolygonsDataFrame} containing the soil map 
+#'   unit polygons that will be disaggregated. The first field of the data frame
+#'   must be an integer that identifies each polygon.
+#' @param composition A \code{data.frame} that contains information on the 
+#'   soil-class composition of each polygon in \code{polygons}. Each row 
+#'   contains information about one soil class component of one polygon, which 
+#'   belongs to one soil map unit. First field contains the integer that 
+#'   identifies the polygon. Second field contains a code that identifies the 
+#'   soil map unit that the polygon belongs to.
+#'   
+#'   If \code{strata = NULL} (the default), third column contains a code that 
+#'   identifies the soil class and fourth column contains a number in the range 
+#'   \code{(0, 100)} that identifies the proportion of the \strong{map unit} 
+#'   that the soil class corresponds to. See the example data 
+#'   \code{data(dalrymple_composition)}.
+#'   
+#'   If \code{strata} is a \code{RasterLayer}, third column contains an integer 
+#'   that identifies the stratum in \code{strata}, fourth column contains a code
+#'   that identifies the soil class and fifth column contains a number in the
+#'   range \code{(0, 100)} that identifies the proportion of the
+#'   \strong{stratum} that the soil class corresponds to.
+#' @param rate An integer that identifies the number of virtual samples to draw 
+#'   from each polygon in each realisation. If \code{method.sample = 
+#'   "by_polygon"}, the number of samples to draw from each polygon in 
+#'   \code{polygons}. If \code{method.sample = "by_area"}, the sampling density 
+#'   in number of samples per square kilometre.
+#' @param reals An integer that identifies the number of realisations of the 
+#'   soil class distribution that DSMART should compute.
+#' @param observations \emph{optional} A \code{data.frame} that contains actual 
+#'   observations of the soil class at locations across the soil map area. These
+#'   data augment the virtual samples and are used in each realisation. Each row
+#'   contains information about one soil class observation. First and second 
+#'   fields contain the \emph{x-} and \emph{y-}components of the observation's 
+#'   spatial location. Third field is the soil class code. See \emph{Details}.
+#' @param method.sample Identifies the sampling method. Valid values are 
+#'   \code{"by_polygon"} (the default), in which case the same number of samples
+#'   are taken from each polygon; or \code{"by_area"}, in which case the number 
+#'   of samples per polygon depends on the area of the polygon.
+#' @param method.allocate Method of allocation of virtual samples to soil 
+#'   classes. Valid values are \code{"weighted"}, for weighted-random allocation
+#'   to a soil class from within the virtual sample's map unit; 
+#'   \code{"random_mapunit"}, for completely random allocation to a soil class 
+#'   from within the virtual sample's map unit; and \code{"random_all"}, for 
+#'   completely random allocation to a soil class from within the entire map 
+#'   area.
+#' @param strata \emph{optional} An integer-valued \code{RasterLayer} that will 
+#'   be used to stratify the allocation of virtual samples to soil classes. 
+#'   Integer values could represent classes of slope position (e.g. crest, 
+#'   backslope, footslope, etc.) or land use (e.g. cropland, native vegetation, 
+#'   etc.) or some other variable deemed to be an important discriminator of the
+#'   occurrence of soil classes within a map unit.
+#' @param nprob At any location, disaggregated soil class predictions can be 
+#'   ranked according to their probabilities of occurence. \code{rdsmart} can 
+#'   map the class predictions, and their probabilities, at any rank. 
+#'   \code{nprob} is an integer that identifies the number of probability ranks 
+#'   to map. For example, if \code{nprob = 3}, DSMART will map the first-, 
+#'   second- and third-most-probable soil classes and their probabilities of 
+#'   occurrence.
+#' @param outputdir A character string that identifies the location of the main 
+#'   output directory. The folder \code{output} and its subfolders will be 
+#'   placed here. Default is the current working directory, \code{getwd()}.
+#' @param stub \emph{optional} A character string that identifies a short name 
+#'   that will be prepended to all output.
+#' @param cpus An integer that identifies the number of CPU processors to use 
+#'   for parallel processing.
+#'   
+#' @references McBratney, A.B., Mendonca Santos, M. de L., Minasny, B., 2003. On
+#'   digital soil mapping. Geoderma 117, 3--52. doi: 
+#'   \href{http://dx.doi.org/10.1016/S0016-7061(03)00223-4}{10.1016/S0016-7061(03)00223-4}
+#'   
+#'   
+#'   
+#'   
+#'   
+#'   
+#'   Odgers, N.P., McBratney, A.B., Minasny, B., Sun, W., Clifford, D., 2014. 
+#'   DSMART: An algorithm to spatially disaggregate soil map units, \emph{in:} 
+#'   Arrouays, D., McKenzie, N.J., Hempel, J.W., Richer de Forges, A., 
+#'   McBratney, A.B. (Eds.), GlobalSoilMap: Basis of the Global Spatial Soil 
+#'   Information System. Taylor & Francis, London, pp. 261--266.
+#'   
+#'   Odgers, N.P., Sun, W., McBratney, A.B., Minasny, B., Clifford, D., 2014. 
+#'   Disaggregating and harmonising soil map units through resampled 
+#'   classification trees. Geoderma 214, 91--100. doi: 
+#'   \href{http://dx.doi.org/10.1016/j.geoderma.2013.09.024}{10.1016/j.geoderma.2013.09.024}
+#'   
+#'   
+#'   
+#'   
+#'   
+#'   
+#' @examples 
+#' # Load datasets
+#' data(dalrymple_composition)
+#' data(dalrymple_covariates)
+#' data(dalrymple_observations)
+#' data(dalrymple_polygons)
+#' 
+#' # Run dsmart without adding observations
+#' dsmart(dalrymple_covariates, dalrymple_polygons, dalrymple_composition,
+#'  rate = 15, reals = 10, cpus = 6)
+#' 
+#' # Run dsmart with extra observations
+#' dsmart(dalrymple_covariates, dalrymple_polygons, dalrymple_composition,
+#'  observations = dalrymple_observations, rate = 15, reals = 10)
+#' 
+#' @export
+#' 
+dsmart <- function(covariates, polygons, composition, rate = 15, reals = 100, 
+                   observations = NULL, method.sample = "by_polygon", 
+                   method.allocate = "weighted", strata = NULL, nprob = 3,
+                   outputdir = getwd(), stub = NULL, cpus = 1)
+{
+  # Set stub to "" if NULL
+  if(is.null(stub))
+  {
+    stub <- ""
+    
+  } else if (stub == "") {
   
-  #create output repositories
-  model_lists<- vector("list", reals) #empty list 
-  dir.create("dsmartOuts/",showWarnings = F)
-  dir.create("dsmartOuts/rasters",showWarnings = F)
-  dir.create("dsmartOuts/models",showWarnings = F)
-  dir.create("dsmartOuts/summaries",showWarnings = F)
-  strg<- paste(getwd(),"/dsmartOuts/rasters/",sep="")
-  strm<- paste(getwd(),"/dsmartOuts/models/",sep="")
-  strs<- paste(getwd(),"/dsmartOuts/summaries/",sep="")
-  write.table(lookup, paste(strg,"classLookupTable.txt",sep=""),sep=",", col.names=T,row.names=F) 
+    stub <- ""
+    
+  } else if(!(substr(stub, nchar(stub), nchar(stub)) == "_")) {
+    
+    stub <- paste0(stub, "_")
+  }
   
-  pb <- txtProgressBar(min=0, max=reals, style=3)
-  for (j in 1:reals){
-    # Empty data frame to store samples
-    coordF<- matrix(NA, nrow=1000, ncol=3) #need to fix up the number of rows to better suit
-    coordF<- data.frame(coordF)
-    names(coordF)<- c("x", "y", "class")
-    cf<- 1
-    
-    # take random samples within each polygon
-    for(poly.id in polygons@data[,1]){
-      #print(poly.id)
-      # Subset a single polygon
-      poly = subset(polygons, polygons@data[,1]==poly.id)
-      #randomise points within polygon
-      coordF[cf:(cf+(n-1)),1:2] = as.data.frame(spsample(poly, n , type="random", iter=10))
-      
-      # Allocate soil classes from within map unit
-      poly.comp=subset(composition, composition$poly==poly.id)
-      # Draw from Dirichlet distribution
-      s=rdirichlet(1, poly.comp$proportion)
-      
-      # Weighted-random sample
-      coordF$class[cf:(cf+(n-1))]=as.character(sample(poly.comp$soil_class, size=n, replace=TRUE, prob=s[1,]))
-      cf<- cf+n}
-    
-      #spatial object
-      locs<- as.data.frame(coordF[complete.cases(coordF),])
-      locs<- rbind(locs,obsdat) # bind sampled data with observed data
-      locs$num<- match(locs$class,lookup$name)
-      coordinates(locs)<- ~ x + y  
-      # Extract covariate values for the sampling locations
-      values=extract(covariates,locs)
-    
-      #sample frame
-      samples = cbind(as.data.frame(values),as.data.frame(locs)[,4])  
-      names(samples)[ncol(samples)]<- "soil_class"
-      samples$soil_class<- as.factor(samples$soil_class)
-      samples<- samples[complete.cases(samples), ]
-    
-      #Fit model####
-      res = C5.0(samples[,-ncol(samples)], y=samples$soil_class)
-      model_lists[[j]]<- res
-      #Capture output
-      out<-capture.output(summary(res))
-      f2<- paste(strm,paste("C5_model_", j,".txt",sep=""),sep="" )
-      cat(out,file=f2,sep="\n",append=TRUE)
-    
-    nme<- paste(paste(paste(strg,"map",sep=""),"_",j,sep=""), ".tif", sep="")
-    r1 <- clusterR(covariates, predict, args=list(res),filename=nme,format="GTiff",overwrite=T, datatype="INT2S")
-    #plot(r1)
-  setTxtProgressBar(pb, j)}
+  # Strip trailing / of outputdir, if it exists
+  if(substr(outputdir, nchar(outputdir), nchar(outputdir) + 1) == "/")
+  {
+    outputdir <- substr(outputdir, 1, nchar(outputdir) - 1)
+  }
   
-  #Save models to file
-  save(model_lists, file = paste(paste(getwd(),"/dsmartOuts/",sep=""),"dsmartModels.RData", sep="") )
-  endCluster()
-  close(pb)
-  message(paste(paste("DSMART outputs can be located at:",getwd(), sep=" "), "/dsmartOuts/",sep="") )}
-
-#END
+  # Carry out spatial disaggregation
+  disaggregate(covariates, polygons, composition, rate = rate, reals = reals, 
+               cpus = cpus, observations = observations,
+               method.sample = method.sample, method.allocate = method.allocate,
+               strata = strata, outputdir = outputdir, stub = stub)
+  
+  # Load realisations to RasterStack
+  realisations <- raster::stack()
+  for(filename in base::list.files(path = paste0(outputdir, "/output/realisations/"),
+                                   pattern = ".tif$", full.names = TRUE))
+  {
+    r <- raster::raster(filename)
+    
+    # Load raster to stack
+    realisations <- raster::stack(realisations, r)
+  }
+  
+  # Load lookup table
+  lookup <- read.table(paste0(outputdir, "/output/", stub,"lookup.txt"),
+                       header = TRUE, sep = ",")
+  
+  # Summarise the results of the spatial disaggregation
+  summarise(realisations, lookup, n.realisations = reals, nprob = nprob,
+            cpus = cpus, outputdir = outputdir, stub = stub)
+  
+  message(paste0("DSMART outputs are located at ", outputdir))
+}
