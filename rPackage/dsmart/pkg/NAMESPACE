@@ -5,5 +5,6 @@ importFrom("gtools", rdirichlet)
 importFrom("C50", C5.0 )
 importFrom("sp", spsample, coordinates)
 
+export(disaggregate)
+export(summarise)
 export(dsmart)
-export(dsmartR)
