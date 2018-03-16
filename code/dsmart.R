@@ -16,6 +16,8 @@
 #   n: The number of samples to draw from each polygon.
 #   reals: Number of model resamplings to execute
 #   cpus: Number of compute nodes to use
+#   factors: Character vector with the names of the covariates that the
+#      model should treat as factors.
 
 # Returns:
 #   A number of items saved to file:
@@ -26,7 +28,7 @@
 #   
 
 
-dsmart<-function(covariates = NULL, polygons = NULL, composition = NULL, n=NULL, reals = NULL, cpus=1){
+dsmart<-function(covariates = NULL, polygons = NULL, composition = NULL, n=NULL, reals = NULL, cpus=1,factors = NULL){
   beginCluster(cpus)
   # Generate lookup table
   lookup = as.data.frame(sort(unique(composition$soil_class)))
@@ -76,7 +78,15 @@ dsmart<-function(covariates = NULL, polygons = NULL, composition = NULL, n=NULL,
       samples = cbind(as.data.frame(values),as.data.frame(locs)[,3])  
       names(samples)[ncol(samples)]<- "soil_class"
       samples$soil_class<- as.factor(samples$soil_class)
-    
+      
+      #Convert designated covariates to factors
+      if(is.character(factors)){
+      fcols <- c(1:ncol(samples))[colnames(samples) %in% factors]
+      frasters <- c(1:length(names(covariates)))[names(covariates) %in% factors]
+      for(i in 1:length(fcols)){
+        samples[,fcols[i]]<-factor(samples[,fcols[i]],levels = as.character(levels(var.stack[[frasters[i]]])[[1]]$Value))
+      }}
+      
       #Fit model####
       res = C5.0(samples[,-ncol(samples)], y=samples$soil_class)
       model_lists[[j]]<- res
