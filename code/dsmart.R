@@ -13,11 +13,19 @@
 #      second column is the map unit code; third column is the soil class
 #      code; fourth column is the areal proportion of the map unit the soil
 #      class is assumed to occupy.
-#   n: The number of samples to draw from each polygon.
+#   n: The number of samples to draw from each polygon. With area-proportional
+#      sampling n indicates the number of samples to draw per square kilometer
+#      (for meter-based and latitude/longitude coordinate systems).
 #   reals: Number of model resamplings to execute
 #   cpus: Number of compute nodes to use
 #   factors: Character vector with the names of the covariates that the
 #      model should treat as factors.
+#   sampling: Name of the sampling scheme. Per-polygon sampling ("PP")
+#      draws a set number of samples for each polygon. Area-proportional
+#      sampling ("AP") draws samples in proportion to the areas of the
+#      polygons.
+#   minrate: Minimum number of samples to draw from a polygon with area-
+#      proportional sampling.
 
 # Returns:
 #   A number of items saved to file:
@@ -28,7 +36,7 @@
 #   
 
 
-dsmart<-function(covariates = NULL, polygons = NULL, composition = NULL, n=NULL, reals = NULL, cpus=1,factors = NULL){
+dsmart<-function(covariates = NULL, polygons = NULL, composition = NULL, n=NULL, reals = NULL, cpus=1,factors = NULL,sampling = "PP",minrate = 0){
   beginCluster(cpus)
   # Generate lookup table
   lookup = as.data.frame(sort(unique(composition$soil_class)))
@@ -46,6 +54,12 @@ dsmart<-function(covariates = NULL, polygons = NULL, composition = NULL, n=NULL,
   strs<- paste(getwd(),"/dsmartOuts/summaries/",sep="")
   write.table(lookup, paste(strg,"classLookupTable.txt",sep=""),sep=",", col.names=T,row.names=F) 
   
+  # For area-proportional sampling, calculate polygon areas in kilometers squared
+  if(sampling == "AP"){
+  areas <- raster::area(polygons)/1e6
+  sample.rate <- n
+  number <- 0
+  }
   
   for (j in 1:reals){
     # Empty data frame to store samples
@@ -56,6 +70,14 @@ dsmart<-function(covariates = NULL, polygons = NULL, composition = NULL, n=NULL,
     for(poly.id in polygons@data[,1])
     {
       #print(poly.id)
+      
+      # For area-proportional sampling, calculate number of samples to draw
+      if(sampling == "AP"){
+      number <- number + 1
+      n <- ceiling(areas[number] / sample_rate))
+      n <- max(minrate, n)
+      }
+      
       # Subset a single polygon
       poly = subset(polygons, polygons@data[,1]==poly.id)
       coordF[cf:(cf+(n-1)),1:2] = as.data.frame(spsample(poly, n , type="random", iter=10))
