@@ -129,7 +129,12 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
   # Compute counts
   raster::beginCluster(cpus)
   counts <- raster::clusterR(realisations, calc,
-                             args = list(fun = function(x) {tabulate(x, nbins = param)}),
+                             args = list(fun = function(x) {  
+    if (is.na(sum(x))) {
+      rep(NA, param)
+    } else {
+      tabulate(x, nbins = param)
+    }}),
                              export = "param")
   raster::endCluster()
   
@@ -153,15 +158,27 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
   }
   
   # Compute the class indices of the n-most-probable soil classes
+  assign("nprob", nprob, envir = .GlobalEnv)
   raster::beginCluster(cpus)
   ordered.indices = raster::clusterR(counts, calc, 
-                                     args = list(fun = function(x) order(x, decreasing = TRUE, na.last = TRUE)))
+                                     args = list(fun = function(x) {
+    if (is.na(sum(x))) {
+      rep(NA, nprob)
+    } else { 
+      order(x, decreasing = TRUE, na.last = TRUE)[1:nprob] 
+    }}))
   raster::endCluster()
   
   # Compute the class probabilities of the n-most-probable soil classes
   raster::beginCluster(cpus)
   ordered.probs = raster::clusterR(probs, calc, 
-                                   args = list(fun = function(x) sort(x, decreasing = TRUE, na.last = TRUE)))
+                                   args = list(fun = function(x) {
+    if (is.na(sum(x))) {
+      rep(NA, max(2,nprob))
+    } else { 
+      sort(x, decreasing = TRUE, na.last = TRUE)[1:max(2,nprob)]
+    }
+  }))
   raster::endCluster()
   
   for (i in 1:nprob)
