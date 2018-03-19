@@ -59,8 +59,10 @@
     if(method.sample == "by_area") {
     
       # Compute area of polygon in square kilometres
-      # FOR NOW, assumes that CRS of polygons is projected and with units of m
-      area <- rgeos::gArea(poly) / 1000000
+      # FOR NOW, assumes that CRS of polygons is projected and with units of m.
+      # The area function of the raster package also gives the area in square
+      # metres for longitude/latitude coordinate systems.
+      area <- raster::area(poly) / 1e6
       
       if(area < 1.0)
       {
@@ -163,8 +165,10 @@
     n.samples <- 0
     if(method.sample == "by_area") {
       # Compute area of polygon in square kilometres
-      # FOR NOW, assumes that CRS of polygons is projected and with units of m
-      area <- rgeos::gArea(poly) / 1000000
+      # FOR NOW, assumes that CRS of polygons is projected and with units of m.
+      # The area function of the raster package also gives the area in square
+      # metres for longitude/latitude coordinate systems.
+      area <- raster::area(poly) / 1e6
       
       if(area < 1.0)
       {
