@@ -28,8 +28,8 @@
 #' \code{dsmart} produces a number of outputs which are saved to subdirectories 
 #' in the current working directory. The base folder for the outputs is 
 #' \code{output}. Inside this folder, rasters of the realisations are saved into
-#' the \code{realisations} subfolder and the classification trees are saved into
-#' the \code{trees} subfolder.
+#' the \code{realisations} subfolder and the classification models are saved into
+#' the \code{models} subfolder.
 #' 
 #' @param covariates A \code{RasterStack} of \emph{scorpan} environmental 
 #'   covariates to calibrate the \code{C50} classification trees against. See 
@@ -79,6 +79,12 @@
 #'   from within the virtual sample's map unit; and \code{"random_all"}, for 
 #'   completely random allocation to a soil class from within the entire map 
 #'   area.
+#' @param method.model Method to be used for the classification model. If no value
+#'   is passed, a C5.0 decision tree is built. Otherwise, the value must match a
+#'   valid 'method' argument in the caret::train function.
+#' @param method.args A list of arguments to be passed to the caret::train function.
+#'   The list can include a trainControl object, arguments to be passed directly
+#'   to the train function and arguments to be passed to the predictive model.
 #' @param strata \emph{optional} An integer-valued \code{RasterLayer} that will 
 #'   be used to stratify the allocation of virtual samples to soil classes. 
 #'   Integer values could represent classes of slope position (e.g. crest, 
@@ -141,7 +147,9 @@
 disaggregate <- function(covariates, polygons, composition, rate = 15,
                          reals = 100, observations = NULL,
                          method.sample = "by_polygon", 
-                         method.allocate = "weighted", strata = NULL,
+                         method.allocate = "weighted",
+                         method.model = NULL,args.model = NULL,
+                         strata = NULL,
                          outputdir = getwd(), stub = NULL, cpus = 1,
                          factors = NULL)
 {
@@ -190,9 +198,21 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
       messages <- append(messages, "'strata': Not a valid RasterLayer.\n")
     }
   }
+  if(!(is.null(method.model)))
+  {
+    if(!(is.character(method.model) & length(method.model) == 1))
+    {
+      messages <- append(messages, "'method.model' must be NULL or a single character value.\n")
+    }
+  }
   if(length(messages) > 1)
   {
     stop(messages)
+  }
+  
+  # If method.model is a character value, load the caret package
+  if(is.character(method.model) & length(method.model) == 1){
+  require(caret)
   }
   
   # Strip trailing / of outputdir, if it exists
@@ -218,7 +238,7 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
   # Create subdirectories to store results in
   dir.create(paste0(outputdir, "/output/"), showWarnings = FALSE)
   dir.create(paste0(outputdir, "/output/realisations"), showWarnings = FALSE)
-  dir.create(paste0(outputdir, "/output/trees"), showWarnings = FALSE)
+  dir.create(paste0(outputdir, "/output/models"), showWarnings = FALSE)
   
   # Generate lookup table
   if(!(is.null(strata))) {
@@ -332,24 +352,28 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
     s[,fcols[i]]<-factor(s[,fcols[i]],levels = as.character(levels(covariates[[frasters[i]]])[[1]]$Value))
     }}
 
-    # Fit classification tree
-    tree = C50::C5.0(s, y = soil_class)
+    # Fit model
+    if(is.null(method.model)){
+    model = C50::C5.0(s, y = soil_class)
+    }else{
+    model = base::do.call(caret::train,c(list(x = s, y = soil_class, method = method.model),args.model))
+    }
     
-    # Save tree to text file
-    out <- utils::capture.output(summary(tree))
-    cat(out, file = paste0(outputdir, "/output/trees/", stub, "tree_",
+    # Save model to text file
+    out <- utils::capture.output(summary(model))
+    cat(out, file = paste0(outputdir, "/output/models/", stub, "model_",
                            formatC(j, width = nchar(reals), format = "d",
                                    flag = "0"), ".txt"),
         sep = "\n", append = TRUE)
     
-    # Save tree to rdata file
-    save(tree, file = paste0(outputdir, "/output/trees/", stub, "tree_",
+    # Save model to rdata file
+    save(model, file = paste0(outputdir, "/output/models/", stub, "model_",
                              formatC(j, width = nchar(reals), format = "d",
                                      flag = "0"), ".RData"))
     
     # Predict realisation and save it to raster
     raster::beginCluster(cpus)
-    r1 <- raster::clusterR(covariates, predict, args = list(tree),
+    r1 <- raster::clusterR(covariates, predict, args = list(model),
                            filename = paste0(outputdir, "/output/realisations/",
                                              stub, "realisation_", formatC(j, width = nchar(reals), format = "d", flag = "0"), ".tif"),
                            format = "GTiff", overwrite = TRUE, datatype = "INT2S")
