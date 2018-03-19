@@ -92,6 +92,9 @@
 #'   that will be prepended to all output.
 #' @param cpus An integer that identifies the number of CPU processors to use 
 #'   for parallel processing.
+#' @param factors A character vector with the names of the covariates that should
+#'   be treated as factors. The corresponding rasters must also be converted to 
+#'   factors beforehand to ensure that the levels match.
 #'   
 #' @examples
 #' # Load datasets
@@ -139,7 +142,8 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
                          reals = 100, observations = NULL,
                          method.sample = "by_polygon", 
                          method.allocate = "weighted", strata = NULL,
-                         outputdir = getwd(), stub = NULL, cpus = 1)
+                         outputdir = getwd(), stub = NULL, cpus = 1,
+                         factors = NULL)
 {
   # Check arguments before proceeding
   messages <- c("Attention is required with the following arguments:\n")
@@ -317,6 +321,16 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
     
     # Sort levels and convert soil_class back to factor
     soil_class <- base::factor(soil_class, levels = levs)
+
+    # Convert designated covariates to factors.
+    # The designated covariate rasters must also be converted to
+    # factors beforehand to ensure that the levels match.
+    if(is.character(factors)){
+    fcols <- c(1:ncol(s))[colnames(s) %in% factors]
+    frasters <- c(1:length(names(covariates)))[names(covariates) %in% factors]
+    for(i in 1:length(fcols)){
+    s[,fcols[i]]<-factor(s[,fcols[i]],levels = as.character(levels(covariates[[frasters[i]]])[[1]]$Value))
+    }}
 
     # Fit classification tree
     tree = C50::C5.0(s, y = soil_class)
