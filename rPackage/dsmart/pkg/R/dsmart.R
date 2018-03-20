@@ -54,6 +54,12 @@
 #'   from within the virtual sample's map unit; and \code{"random_all"}, for 
 #'   completely random allocation to a soil class from within the entire map 
 #'   area.
+#' @param method.model Method to be used for the classification model. If no value
+#'   is passed, a C5.0 decision tree is built. Otherwise, the value must match a
+#'   valid 'method' argument in the caret::train function.
+#' @param method.args A list of arguments to be passed to the caret::train function.
+#'   The list can include a trainControl object, arguments to be passed directly
+#'   to the train function and arguments to be passed to the predictive model.
 #' @param strata \emph{optional} An integer-valued \code{RasterLayer} that will 
 #'   be used to stratify the allocation of virtual samples to soil classes. 
 #'   Integer values could represent classes of slope position (e.g. crest, 
@@ -74,6 +80,8 @@
 #'   that will be prepended to all output.
 #' @param cpus An integer that identifies the number of CPU processors to use 
 #'   for parallel processing.
+#' @param factors A character vector with the names of the covariates that should
+#'   be treated as factors.
 #'   
 #' @references McBratney, A.B., Mendonca Santos, M. de L., Minasny, B., 2003. On
 #'   digital soil mapping. Geoderma 117, 3--52. doi: 
@@ -119,8 +127,11 @@
 #' 
 dsmart <- function(covariates, polygons, composition, rate = 15, reals = 100, 
                    observations = NULL, method.sample = "by_polygon", 
-                   method.allocate = "weighted", strata = NULL, nprob = 3,
-                   outputdir = getwd(), stub = NULL, cpus = 1)
+                   method.allocate = "weighted",
+                   method.model = NULL, args.model = NULL,
+                   strata = NULL, nprob = 3,
+                   outputdir = getwd(), stub = NULL, cpus = 1,
+                   factors = NULL)
 {
   # Set stub to "" if NULL
   if(is.null(stub))
@@ -146,7 +157,9 @@ dsmart <- function(covariates, polygons, composition, rate = 15, reals = 100,
   disaggregate(covariates, polygons, composition, rate = rate, reals = reals, 
                cpus = cpus, observations = observations,
                method.sample = method.sample, method.allocate = method.allocate,
-               strata = strata, outputdir = outputdir, stub = stub)
+               method.model = method.model,args.model = args.model,
+               strata = strata, outputdir = outputdir, stub = stub,
+               factors = factors)
   
   # Load realisations to RasterStack
   realisations <- raster::stack()

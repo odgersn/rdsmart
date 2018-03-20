@@ -99,8 +99,7 @@
 #' @param cpus An integer that identifies the number of CPU processors to use 
 #'   for parallel processing.
 #' @param factors A character vector with the names of the covariates that should
-#'   be treated as factors. The corresponding rasters must also be converted to 
-#'   factors beforehand to ensure that the levels match.
+#'   be treated as factors.
 #'   
 #' @examples
 #' # Load datasets
@@ -343,24 +342,26 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
     soil_class <- base::factor(soil_class, levels = levs)
 
     # Convert designated covariates to factors.
-    # The designated covariate rasters must also be converted to
-    # factors beforehand to ensure that the levels match.
     if(is.character(factors)){
     fcols <- c(1:ncol(s))[colnames(s) %in% factors]
-    frasters <- c(1:length(names(covariates)))[names(covariates) %in% factors]
     for(i in 1:length(fcols)){
-    s[,fcols[i]]<-factor(s[,fcols[i]],levels = as.character(levels(covariates[[frasters[i]]])[[1]]$Value))
+    s[,fcols[i]]<-as.factor(s[,fcols[i]])
     }}
 
     # Fit model
     if(is.null(method.model)){
     model = C50::C5.0(s, y = soil_class)
     }else{
+    soil_class <- base::droplevels(soil_class)
     model = base::do.call(caret::train,c(list(x = s, y = soil_class, method = method.model),args.model))
     }
     
     # Save model to text file
-    out <- utils::capture.output(summary(model))
+    if(is.null(method.model)){
+      out <- utils::capture.output(summary(model))
+    }else{
+      out <- utils::capture.output(model$finalModel)
+    }
     cat(out, file = paste0(outputdir, "/output/models/", stub, "model_",
                            formatC(j, width = nchar(reals), format = "d",
                                    flag = "0"), ".txt"),
