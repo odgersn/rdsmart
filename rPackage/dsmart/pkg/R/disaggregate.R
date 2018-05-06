@@ -216,13 +216,6 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
   dir.create(paste0(outputdir, "/output/realisations"), showWarnings = FALSE)
   dir.create(paste0(outputdir, "/output/trees"), showWarnings = FALSE)
   
-  # Generate lookup table
-  if(!(is.null(strata))) {
-    names(composition) <- c("poly", "mapunit", "stratum", "soil_class", "proportion")
-  } else {
-    names(composition) <- c("poly", "mapunit", "soil_class", "proportion")
-  }
-  
   # Write covariate names to file
   write.table(names(covariates), paste0(outputdir, "/output/", stub,
                                         "covariate_names.txt"),

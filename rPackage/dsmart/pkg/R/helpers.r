@@ -51,6 +51,8 @@
   # Process each polygon in polygons
   for(poly.id in polygons@data[, 1])
   {
+    print(poly.id)
+    
     # Subset a polygon
     poly <- subset(polygons, polygons@data[, 1] == poly.id)
     
