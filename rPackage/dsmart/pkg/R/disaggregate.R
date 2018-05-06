@@ -270,6 +270,12 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
                                             method.allocate = method.allocate)
   }
   
+  # Make sure that there are no missing values in samples
+  samples <-
+    samples %>%                       # With the samples data frame:
+    complete.cases() %>%              # Determine which records are complete
+    dplyr::filter(samples, .)         # Filter for only the complete records
+  
   # If there are observations, get their covariates
   if(!(is.null(observations)))
   { 

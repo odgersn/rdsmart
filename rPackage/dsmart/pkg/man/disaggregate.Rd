@@ -7,8 +7,9 @@ classification trees}
 \usage{
 disaggregate(covariates, polygons, composition, rate = 15, reals = 100,
   observations = NULL, method.sample = "by_polygon",
-  method.allocate = "weighted", strata = NULL, outputdir = getwd(),
-  stub = NULL, cpus = 1)
+  method.allocate = "weighted", method.model = NULL, args.model = NULL,
+  strata = NULL, outputdir = getwd(), stub = NULL, cpus = 1,
+  factors = NULL)
 }
 \arguments{
 \item{covariates}{A \code{RasterStack} of \emph{scorpan} environmental 
@@ -67,6 +68,10 @@ from within the virtual sample's map unit; and \code{"random_all"}, for
 completely random allocation to a soil class from within the entire map 
 area.}
 
+\item{method.model}{Method to be used for the classification model. If no value
+is passed, a C5.0 decision tree is built. Otherwise, the value must match a
+valid 'method' argument in the caret::train function.}
+
 \item{strata}{\emph{optional} An integer-valued \code{RasterLayer} that will 
 be used to stratify the allocation of virtual samples to soil classes. 
 Integer values could represent classes of slope position (e.g. crest, 
@@ -83,6 +88,13 @@ that will be prepended to all output.}
 
 \item{cpus}{An integer that identifies the number of CPU processors to use 
 for parallel processing.}
+
+\item{factors}{A character vector with the names of the covariates that should
+be treated as factors.}
+
+\item{method.args}{A list of arguments to be passed to the caret::train function.
+The list can include a trainControl object, arguments to be passed directly
+to the train function and arguments to be passed to the predictive model.}
 }
 \description{
 This function, together with companion function \code{dsmartR} implements the
@@ -113,8 +125,8 @@ rather than, for example, orders or great groups.
 \code{dsmart} produces a number of outputs which are saved to subdirectories 
 in the current working directory. The base folder for the outputs is 
 \code{output}. Inside this folder, rasters of the realisations are saved into
-the \code{realisations} subfolder and the classification trees are saved into
-the \code{trees} subfolder.
+the \code{realisations} subfolder and the classification models are saved into
+the \code{models} subfolder.
 }
 \examples{
 # Load datasets
