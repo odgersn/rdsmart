@@ -274,31 +274,55 @@
 #'
 .allocate <- function(classes, n = 15, method = "random", weights = NULL)
 {
-  if((length(classes) == 0) | (is.null(classes)))
-  {
+  # Check parameter values before proceeding
+  if((base::length(classes) == 0) | (base::is.null(classes))) {
+    
     stop("Classes are not specified.")
-  }
-  if(n < 1)
-  {
-    stop("n must be greater than 0.")
+    
   }
   
-  if (method == "weighted")
-  {
-    if(is.null(weights))
-    {
+  if(n < 1) {
+    
+    stop("n must be greater than 0.")
+    
+  }
+  
+  if (method == "weighted") {
+    
+    if(base::is.null(weights)) {
+      
       stop("Weighted random allocation specified but no weights supplied.")
-    }
-    else if(!(length(classes) == length(weights)))
-    {
+      
+    } else if(!(base::length(classes) == base::length(weights))) {
+      
       stop("Number of classes is not the same as number of weights.")
+      
     }
+  }
+
+  ### This is useful functionality but is too slow  
+  # if(base::all(base::is.na(classes)) == TRUE) {
+  #   
+  #   # Check whether all values in classes are NA, in the event that a map
+  #   # unit's composition is present in the composition file but undefined.
+  #   # Return a vector of NAs of length n (deal with its implications
+  #   # appropriately in .getVirtualSamples or .getStratifiedVirtualSamples)
+  #   return(base::rep(NA, times = n))
+  # }
+  
+  # Check whether all values in classes or weights are NA, in the event that a
+  # map unit's composition is present but undefined
+  if(base::all(base::is.na(classes)) == TRUE) {
+    
+    # Return a vector of NAs of length n (deal with it appropriately in
+    # .getVirtualSamples or .getStratifiedVirtualSamples)
+    return(base::rep(NA, times = n))
   }
   
   # Perform allocation
   allocation <- character()
-  if(method == "weighted")
-  {
+  if(method == "weighted"){
+    
     # Weighted-random allocation
     # Draw from Dirichlet distribution
     s <- gtools::rdirichlet(1, weights)

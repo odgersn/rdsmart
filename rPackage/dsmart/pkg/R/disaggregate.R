@@ -246,6 +246,46 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
     names(composition) <- c("poly", "mapunit", "soil_class", "proportion")
   }
   
+  # Since we only really need the first column of the polygons SpatialPolygonsDataFrame,
+  # drop all its other attributes and rename the first column to "poly"
+  polygons <-
+    polygons %>%                                        # With polygons:
+    sf::st_as_sf() %>%                                  # Cast to an sf data frame
+    dplyr::select(1, geometry) %>%                      # Select just the id column and the geometry
+    magrittr::set_colnames(c("poly", "geometry")) %>%   # Rename columns
+    as("Spatial")                                       # Cast back to a SpatialPolygonsDataFrame
+
+  # Make sure that there are no missing values in map unit composition
+  polys_to_remove <-
+    composition %>%                 # With the map unit composition:
+    stats::complete.cases() %>%     # Identify complete cases
+    magrittr::equals(FALSE) %>%     # Invert the complete cases identification
+    base::which() %>%               # Find the rows of composition that are incomplete
+    composition$poly[.] %>%         # Find the ids of the polygons that contain incomplete data
+    base::unique()                  # Get the unique polygon ids
+
+  # Remove the polygons that contain missing information from both the polygons
+  # SpatialPolygonsDataFrame and the composition data frame
+  if(length(polys_to_remove) > 0) {
+    
+    polygons <-
+      polygons %>%                                      # With polygons:
+      sf::st_as_sf() %>%                                # Cast to an sf data frame
+      dplyr::filter(!(poly %in% polys_to_remove)) %>%   # Filter out the polygons whose ids are in polys_to_remove
+      sf::st_sf() %>%                                   # Shouldn't have to do this step
+      as("Spatial")                                     # Cast back to a SpatialPolygonsDataFrame
+
+    composition <-
+      composition %>%                                   # With composition:
+      dplyr::filter(!(poly %in% polys_to_remove))       # Filter out the polygons whose ids are in polys_to_remove
+
+    # Let the user know about what we've done
+    base::paste0("The following polygons were removed from further analysis because they have incomplete or undefined map unit compositions: ",
+                 base::paste(base::as.character(polys_to_remove), collapse = ", ")) %>%
+      warning()
+  }
+    
+  
   # Write covariate names to file
   write.table(names(covariates), paste0(outputdir, "/output/", stub,
                                         "covariate_names.txt"),

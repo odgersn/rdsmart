@@ -1,5 +1,6 @@
 import("rgdal") 
 import("sp")
+import("sf")
 importFrom("raster", beginCluster, endCluster, clusterR, predict, extract, calc, nlayers, writeRaster, stack)
 importFrom("gtools", rdirichlet)
 importFrom("C50", C5.0 )
