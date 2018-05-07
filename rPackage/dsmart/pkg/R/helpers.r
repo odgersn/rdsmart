@@ -45,14 +45,14 @@
                                method.sample = "by_polygon", 
                                method.allocate = "weighted")
 {
-  # Empty data frame to hold samples
-  samples <- data.frame()
+  # Empty list to hold samples
+  samples <- list()
   
   # Process each polygon in polygons
   for(poly.id in polygons@data[, 1])
   {
     # Subset a polygon
-    poly <- subset(polygons, polygons@data[, 1] == poly.id)
+    poly <- base::subset(polygons, polygons@data[, 1] == poly.id)
     
     # If sample = "area", determine the correct number of samples to take
     n.samples <- 0
@@ -79,18 +79,19 @@
     # Retain only those cells that do not have NA in their covariates
     poly.cells <- as.data.frame(raster::extract(covariates, poly, 
                                                 cellnumbers = TRUE))
-    poly.cells <- poly.cells[which(complete.cases(poly.cells)), ]
+    poly.cells <- poly.cells[base::which(stats::complete.cases(poly.cells)), ]
     
     # Sample grid cells with replacement for ALL realisations in one go
-    poly.samples <- poly.cells[sample(nrow(poly.cells), replace = TRUE, 
-                                      size = n.samples * n.realisations), ]
+    poly.samples <- poly.cells[base::sample(base::nrow(poly.cells),
+                                            replace = TRUE,
+                                            size = n.samples * n.realisations), ]
     
     # Allocate all samples to a soil class
     soil_class <- character()
     if(method.allocate == "weighted") {
       # Weighted random allocation
-      poly.classes <- as.character(composition[which(composition[, 1] == poly.id), 3])
-      poly.weights <- composition[which(composition[, 1] == poly.id), 4]
+      poly.classes <- base::as.character(composition[base::which(composition[, 1] == poly.id), 3])
+      poly.weights <- composition[base::which(composition[, 1] == poly.id), 4]
       
       if(length(poly.classes) == 0) {
         stop(paste0("No map unit composition for polygon ", poly.id))
@@ -122,18 +123,20 @@
     
     # Add realisation id, spatial coordinates, soil class to sampled grid cells
     xy <- as.data.frame(raster::xyFromCell(covariates, poly.samples$cell))
-    meta <- list(realisation = rep(1:n.realisations, times = n.samples),
+    meta <- list(realisation = base::rep(1:n.realisations, times = n.samples),
                  type = base::rep("virtual", nrow(xy)),
-                 sampling = base::rep(method.sample, nrow(xy)),
-                 allocation = base::rep(method.allocate, nrow(xy)))
+                 sampling = base::rep(method.sample, base::nrow(xy)),
+                 allocation = base::rep(method.allocate, base::nrow(xy)))
     poly.samples <- cbind(as.data.frame(meta), xy, soil_class, 
-                          poly.samples[, 2:ncol(poly.samples)])
+                          poly.samples[, 2:base::ncol(poly.samples)])
     
-    # Add polygon samples to master data frame
-    samples = rbind(samples, poly.samples)
+    # Add polygon samples to list
+    samples <- append(samples, list(poly.samples))
   }
   
-  # Return master data frame of samples
+  # Merge polygon sample data frames
+  samples <- data.table::rbindlist(samples)
+  
   return(samples)
 }
 
@@ -152,8 +155,8 @@
     names(composition) <- c("poly", "mapunit", "stratum", "soil_class", "proportion")
   } else stop("Map unit composition in unknown format.")
   
-  # Empty data frame to hold samples
-  samples <- data.frame()
+  # Empty list to hold samples
+  samples <- list()
   
   # Process each polygon in polygons
   for(poly.id in polygons@data[, 1])
@@ -254,10 +257,14 @@
                  allocation = base::rep(method.allocate, nrow(xy)))
     poly.samples <- cbind(as.data.frame(meta), poly.samples)
     
-    # Add polygon samples to master data frame
-    samples = rbind(samples, poly.samples)
+    # Add polygon samples to list
+    samples <- base::append(samples, list(poly.samples))
     
   }
+  
+  # Merge polygon sample data frames
+  samples <- data.table::rbindlist(samples)
+  
   return(samples)
 }
 

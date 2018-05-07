@@ -8,7 +8,7 @@ Authors@R: c(person("Nathan", "Odgers", email = "n.p.odgers@gmail.com", role = c
 Description: Disaggregate and harmonise of soil map units
 Depends: R (>= 3.0.1)
 Imports: raster, rgdal, sp, C50, gtools,
-    rgeos, magrittr, dplyr, sf
+    rgeos, magrittr, dplyr, sf, data.table
 Suggests: rasterVis, snow
 License: GPL-2
 LazyData: no

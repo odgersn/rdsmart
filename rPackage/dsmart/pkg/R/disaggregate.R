@@ -280,9 +280,8 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
       dplyr::filter(!(poly %in% polys_to_remove))       # Filter out the polygons whose ids are in polys_to_remove
 
     # Let the user know about what we've done
-    base::paste0("The following polygons were removed from further analysis because they have incomplete or undefined map unit compositions: ",
-                 base::paste(base::as.character(polys_to_remove), collapse = ", ")) %>%
-      warning()
+    warning(base::paste0("The following polygons were removed from further analysis because they have incomplete or undefined map unit compositions: ",
+                 base::paste(base::as.character(polys_to_remove), collapse = ", ")))
   }
     
   
