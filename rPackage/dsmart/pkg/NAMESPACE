@@ -6,6 +6,7 @@ importFrom("gtools", rdirichlet)
 importFrom("C50", C5.0 )
 importFrom("sp", spsample, coordinates)
 importFrom(magrittr,"%>%")
+importFrom(foreach, "%dopar%")
 
 export(disaggregate)
 export(summarise)

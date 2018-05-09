@@ -300,7 +300,8 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
     samples <- .getVirtualSamples(covariates, polygons, composition,
                                   n.realisations = reals, rate = rate,
                                   method.sample = method.sample,
-                                  method.allocate = method.allocate)
+                                  method.allocate = method.allocate,
+                                  cpus = cpus)
   } else {
     samples <- .getStratifiedVirtualSamples(covariates, polygons, composition,
                                             strata, n.realisations = reals,

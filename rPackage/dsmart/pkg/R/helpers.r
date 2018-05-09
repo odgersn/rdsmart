@@ -39,17 +39,20 @@
 #'   from within the virtual sample's map unit; and \code{"random_all"}, for 
 #'   completely random allocation to a soil class from within the entire map 
 #'   area.
-#'   
+#' @param cpus An integer that identifies the number of CPU processors to use 
+#'   for parallel processing.
+#' 
 .getVirtualSamples <- function(covariates, polygons, composition,
                                n.realisations = 100, rate = 15,
                                method.sample = "by_polygon", 
-                               method.allocate = "weighted")
+                               method.allocate = "weighted", cpus = 1)
 {
-  # Empty list to hold samples
-  samples <- list()
+  # Initialise cluster
+  cl <- parallel::makeCluster(cpus)
+  doParallel::registerDoParallel(cl)
   
-  # Process each polygon in polygons
-  for(poly.id in polygons@data[, 1])
+  samples <- foreach::foreach(poly.id = polygons@data[, 1],
+                               .packages = c('raster', 'sp')) %dopar%
   {
     # Subset a polygon
     poly <- base::subset(polygons, polygons@data[, 1] == poly.id)
@@ -131,8 +134,11 @@
                           poly.samples[, 2:base::ncol(poly.samples)])
     
     # Add polygon samples to list
-    samples <- append(samples, list(poly.samples))
+    #samples <- append(samples, list(poly.samples))
+    return(poly.samples)
   }
+  
+  parallel::stopCluster(cl)
   
   # Merge polygon sample data frames
   samples <- data.table::rbindlist(samples)
