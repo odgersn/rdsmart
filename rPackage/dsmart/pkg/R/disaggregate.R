@@ -234,6 +234,11 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
     stub <- paste0(stub, "_")
   }
   
+  # Create subdirectories to store results in
+  dir.create(paste0(outputdir, "/output/"), showWarnings = FALSE)
+  dir.create(paste0(outputdir, "/output/realisations"), showWarnings = FALSE)
+  dir.create(paste0(outputdir, "/output/models"), showWarnings = FALSE)
+  
   # Write function call to text file as a means of preserving the parameters
   # that were submitted to the disaggregate function for the current run.
   # We should think of a less clunky way to do it---usually the call is returned
@@ -241,11 +246,6 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
   base::match.call() %>% 
     base::deparse() %>% 
     base::write(file = paste0(outputdir, "/output/disaggregate_function_call.txt"))
-  
-  # Create subdirectories to store results in
-  dir.create(paste0(outputdir, "/output/"), showWarnings = FALSE)
-  dir.create(paste0(outputdir, "/output/realisations"), showWarnings = FALSE)
-  dir.create(paste0(outputdir, "/output/models"), showWarnings = FALSE)
   
   # Generate lookup table
   if(!(is.null(strata))) {
