@@ -114,6 +114,14 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
     stub <- paste0(stub, "_")
   }
   
+  # Write function call to text file as a means of preserving the parameters
+  # that were submitted to the summarise function for the current run.
+  # We should think of a less clunky way to do it---usually the call is returned
+  # from the called function as a list element together with other output.
+  base::match.call() %>% 
+    base::deparse() %>% 
+    base::write(file = paste0(outputdir, "/output/summarise_function_call.txt"))
+  
   # Set up output directories
   dir.create(paste0(outputdir, "/output/"), showWarnings = FALSE)
   dir.create(paste0(outputdir, "/output/probabilities/"), showWarnings = FALSE)

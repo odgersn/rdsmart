@@ -153,6 +153,14 @@ dsmart <- function(covariates, polygons, composition, rate = 15, reals = 100,
     outputdir <- substr(outputdir, 1, nchar(outputdir) - 1)
   }
   
+  # Write function call to text file as a means of preserving the parameters
+  # that were submitted to the dsmart function for the current run.
+  # We should think of a less clunky way to do it---usually the call is returned
+  # from the called function as a list element together with other output.
+  base::match.call() %>% 
+    base::deparse() %>% 
+    base::write(file = paste0(outputdir, "/output/dsmart_function_call.txt"))
+  
   # Carry out spatial disaggregation
   disaggregate(covariates, polygons, composition, rate = rate, reals = reals, 
                cpus = cpus, observations = observations,
