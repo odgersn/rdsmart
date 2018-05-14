@@ -34,6 +34,9 @@
 #'   placed here. Default is the current working directory, \code{getwd()}.
 #' @param stub \emph{optional} A character string that identifies a short name
 #'   that will be prepended to all output.
+#'
+#' @return A list that contains metadata about the current run of
+#'   \code{summarise}.
 #'   
 #' @references McBratney, A.B., Mendonca Santos, M. de L., Minasny, B., 2003. On
 #'   digital soil mapping. Geoderma 117, 3--52. doi: 
@@ -63,6 +66,12 @@
 summarise <- function(realisations, lookup, n.realisations = raster::nlayers(realisations),
                       nprob = 3, cpus = 1, outputdir = getwd(), stub = NULL)
 {
+  # Create list to store output
+  output <- base::list()
+  
+  # Save start time
+  output$timing <- base::list(start = base::date())
+  
   # Check arguments before proceeding
   messages <- c("Attention is required with the following arguments:\n")
   if(!(class(realisations) == "RasterStack"))
@@ -114,18 +123,22 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
     stub <- paste0(stub, "_")
   }
   
-  # Set up output directories
-  dir.create(paste0(outputdir, "/output/"), showWarnings = FALSE)
-  dir.create(paste0(outputdir, "/output/probabilities/"), showWarnings = FALSE)
-  dir.create(paste0(outputdir, "/output/mostprobable/"), showWarnings = FALSE)
+  # Save function call
+  output$call <- base::match.call()
   
-  # Write function call to text file as a means of preserving the parameters
-  # that were submitted to the summarise function for the current run.
-  # We should think of a less clunky way to do it---usually the call is returned
-  # from the called function as a list element together with other output.
-  base::match.call() %>% 
-    base::deparse() %>% 
-    base::write(file = paste0(outputdir, "/output/summarise_function_call.txt"))
+  # Save parameters
+  output$parameters <- base::list(n.realisations = n.realisations,
+                                  nprob = nprob, cpus = cpus, stub = stub)
+  
+  # Set up output directories
+  dir.create(base::paste0(outputdir, "/output/"), showWarnings = FALSE)
+  dir.create(base::paste0(outputdir, "/output/probabilities/"), showWarnings = FALSE)
+  dir.create(base::paste0(outputdir, "/output/mostprobable/"), showWarnings = FALSE)
+  
+  # Save output locations
+  output$locations <- base::list(root = base::paste0(outputdir, "/output/"),
+                                 probabilities = base::paste0(outputdir, "/output/probabilities/"),
+                                 mostprobable = base::paste0(outputdir, "/output/mostprobable/"))
   
   # Make sure lookup table column names are correct
   names(lookup) <- c("name", "code")
@@ -210,6 +223,12 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
   confusion <- raster::clusterR(ordered.probs, fun = function(x) (1 - (x[[1]] - x[[2]])),
                                 filename = paste0(outputdir, "/output/mostprobable/", stub, "confusion.tif"), format = "GTiff", overwrite = TRUE)
   raster::endCluster()
+  
+  # Save finish time
+  output$timing$finish <- base::date()
+  
+  # Return output
+  return(output)
 }
 
 #END

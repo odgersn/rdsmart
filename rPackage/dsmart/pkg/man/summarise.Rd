@@ -42,6 +42,10 @@ placed here. Default is the current working directory, \code{getwd()}.}
 \item{stub}{\emph{optional} A character string that identifies a short name
 that will be prepended to all output.}
 }
+\value{
+A list that contains metadata about the current run of
+  \code{summarise}.
+}
 \description{
 \code{summarise} summarises the results of the spatial disaggregation of a 
 polygon soil map in several ways. First, it computes the probabilities of 

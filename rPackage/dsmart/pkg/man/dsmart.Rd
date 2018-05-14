@@ -104,6 +104,10 @@ be treated as factors.}
 The list can include a trainControl object, arguments to be passed directly
 to the train function and arguments to be passed to the predictive model.}
 }
+\value{
+A list that aggregates metadata about the current run of
+  \code{disaggregate} and \code{summarise}.
+}
 \description{
 \code{dsmart} performs the spatial disaggregation of a soil choropleth map. 
 The underlying functions are \code{disaggregate}, which performs the spatial 
@@ -130,11 +134,6 @@ dsmart(dalrymple_covariates, dalrymple_polygons, dalrymple_composition,
 McBratney, A.B., Mendonca Santos, M. de L., Minasny, B., 2003. On
   digital soil mapping. Geoderma 117, 3--52. doi: 
   \href{http://dx.doi.org/10.1016/S0016-7061(03)00223-4}{10.1016/S0016-7061(03)00223-4}
-  
-  
-  
-  
-  
   
   Odgers, N.P., McBratney, A.B., Minasny, B., Sun, W., Clifford, D., 2014. 
   DSMART: An algorithm to spatially disaggregate soil map units, \emph{in:} 

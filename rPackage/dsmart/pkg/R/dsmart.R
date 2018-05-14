@@ -83,14 +83,12 @@
 #' @param factors A character vector with the names of the covariates that should
 #'   be treated as factors.
 #'   
+#' @return A list that aggregates metadata about the current run of
+#'   \code{disaggregate} and \code{summarise}.
+#'   
 #' @references McBratney, A.B., Mendonca Santos, M. de L., Minasny, B., 2003. On
 #'   digital soil mapping. Geoderma 117, 3--52. doi: 
 #'   \href{http://dx.doi.org/10.1016/S0016-7061(03)00223-4}{10.1016/S0016-7061(03)00223-4}
-#'   
-#'   
-#'   
-#'   
-#'   
 #'   
 #'   Odgers, N.P., McBratney, A.B., Minasny, B., Sun, W., Clifford, D., 2014. 
 #'   DSMART: An algorithm to spatially disaggregate soil map units, \emph{in:} 
@@ -102,11 +100,6 @@
 #'   Disaggregating and harmonising soil map units through resampled 
 #'   classification trees. Geoderma 214, 91--100. doi: 
 #'   \href{http://dx.doi.org/10.1016/j.geoderma.2013.09.024}{10.1016/j.geoderma.2013.09.024}
-#'   
-#'   
-#'   
-#'   
-#'   
 #'   
 #' @examples 
 #' # Load datasets
@@ -133,6 +126,12 @@ dsmart <- function(covariates, polygons, composition, rate = 15, reals = 100,
                    outputdir = getwd(), stub = NULL, cpus = 1,
                    factors = NULL)
 {
+  # Create list to store output
+  output <- base::list()
+  
+  # Save start time
+  output$timing <- base::list(start = base::date())
+  
   # Set stub to "" if NULL
   if(is.null(stub))
   {
@@ -164,12 +163,15 @@ dsmart <- function(covariates, polygons, composition, rate = 15, reals = 100,
     base::write(file = paste0(outputdir, "/output/dsmart_function_call.txt"))
   
   # Carry out spatial disaggregation
-  disaggregate(covariates, polygons, composition, rate = rate, reals = reals, 
-               cpus = cpus, observations = observations,
-               method.sample = method.sample, method.allocate = method.allocate,
-               method.model = method.model,args.model = args.model,
-               strata = strata, outputdir = outputdir, stub = stub,
-               factors = factors)
+  output$disaggregate <- disaggregate(covariates, polygons, composition,
+                                      rate = rate, reals = reals, 
+                                      cpus = cpus, observations = observations,
+                                      method.sample = method.sample,
+                                      method.allocate = method.allocate,
+                                      method.model = method.model,
+                                      args.model = args.model,
+                                      strata = strata, outputdir = outputdir,
+                                      stub = stub, factors = factors)
   
   # Load realisations to RasterStack
   realisations <- raster::stack()
@@ -187,8 +189,13 @@ dsmart <- function(covariates, polygons, composition, rate = 15, reals = 100,
                        header = TRUE, sep = ",")
   
   # Summarise the results of the spatial disaggregation
-  summarise(realisations, lookup, n.realisations = reals, nprob = nprob,
-            cpus = cpus, outputdir = outputdir, stub = stub)
+  output$summarise <- summarise(realisations, lookup, n.realisations = reals,
+                                nprob = nprob, cpus = cpus, 
+                                outputdir = outputdir, stub = stub)
   
-  message(paste0("DSMART outputs are located at ", outputdir))
+  # Save finish time
+  output$timing$finish <- base::date()
+  
+  # Return output
+  return(output)
 }
