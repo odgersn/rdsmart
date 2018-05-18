@@ -4,7 +4,7 @@ Title: Disaggregation and harmonisation of soil map units through resampled clas
 Version: 2.0.19
 Date: 2018-05-15
 Authors@R: c(person("Nathan", "Odgers", email = "n.p.odgers@gmail.com", role = c("cre", "aut")),
-    person("Brendan", "Malone", email = "brendan.malone@sydney.edu.au", role = c("cre", "aut")),
+    person("Brendan", "Malone", email = "brendan.malone@sydney.edu.au", role = "aut"),
     person(given = "Anders", middle = "Bjørn", family = "Møller", role = "aut", email = "anbm@agro.au.dk"))
 Description: Disaggregate and harmonise of soil map units
 Depends: R (>= 3.0.1)
