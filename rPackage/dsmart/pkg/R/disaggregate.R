@@ -422,11 +422,22 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
     for(i in 1:length(fcols)){
     s[,fcols[i]]<-as.factor(s[,fcols[i]])
     }}
+    
+    # Test if there are levels in soil_class with 0 cases
+    # (this is used for a workaround, see below).
+    zeroes<-sum(table(soil_class) == 0) > 0
+    
+    # If there are levels with 0 cases, make a reclassification table for the prediction raster.
+    rclt<-cbind(c(1:sum(table(soil_class) != 0))
+                , c(1:length(table(soil_class)))[table(soil_class) != 0]
+    )
 
     # Fit model
     if(is.null(method.model)){
     model = C50::C5.0(s, y = soil_class)
     }else{
+    # The train function does not accept factors in which there are levels which have 0 cases.
+    # These levels must therefore be dropped.
     soil_class <- base::droplevels(soil_class)
     model = base::do.call(caret::train,c(list(x = s, y = soil_class, method = method.model),args.model))
     }
@@ -453,6 +464,17 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
                            filename = paste0(outputdir, "/output/realisations/",
                                              stub, "realisation_", formatC(j, width = nchar(reals), format = "d", flag = "0"), ".tif"),
                            format = "GTiff", overwrite = TRUE, datatype = "INT2S")
+    
+    # If levels were dropped from soil_class in order to use the train function,
+    # the prediction raster must be reclassified in order to ensure that the integer
+    # values represent the same soil types across the realizations.
+    if(zeroes == TRUE & is.null(method.model) == FALSE)
+    {
+      r1 <- raster::clusterR(r1, reclassify, args = list(model),
+                             filename = paste0(outputdir, "/output/realisations/",
+                                               stub, "realisation_", formatC(j, width = nchar(reals), format = "d", flag = "0"), ".tif"),
+                             format = "GTiff", overwrite = TRUE, datatype = "INT2S")
+    }
     raster::endCluster()
   }
   
