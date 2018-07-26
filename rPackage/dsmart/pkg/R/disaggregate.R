@@ -470,7 +470,7 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
     # values represent the same soil types across the realizations.
     if(zeroes == TRUE & is.null(method.model) == FALSE)
     {
-      r1 <- raster::clusterR(r1, reclassify, args = list(model),
+      r1 <- raster::clusterR(r1, reclassify, args = list(rcl = rclt),
                              filename = paste0(outputdir, "/output/realisations/",
                                                stub, "realisation_", formatC(j, width = nchar(reals), format = "d", flag = "0"), ".tif"),
                              format = "GTiff", overwrite = TRUE, datatype = "INT2S")
