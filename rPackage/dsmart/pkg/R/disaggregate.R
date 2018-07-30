@@ -505,7 +505,7 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
         raster::beginCluster(cpus)
         tmp1 <- raster::clusterR(covariates, predict, args = list(model
                                                                 , type = "prob"
-                                                                , index = 1:nrow(lookup)
+                                                                , index = 1:base::length(base::levels(soil_class))
                                                                 , na.rm = TRUE))
         # Then, a raster with 0's is calculated (the missing levels have 0 probability for the
         # realisation in question)
@@ -518,9 +518,9 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
         {
           if(i %in% rclt[,2])
           {
-            rlist[[i]]<-b[[which(rclt[,2] == i)]]
+            rlist[[i]]<-tmp1[[which(rclt[,2] == i)]]
           }else{
-            rlist[[i]]<-zero
+            rlist[[i]]<-tmp2
           }
         }
         rlist<-stack(rlist)
