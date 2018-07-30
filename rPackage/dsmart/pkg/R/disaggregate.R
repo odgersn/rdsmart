@@ -1,7 +1,7 @@
 #' Disaggregating and harmonising soil map units through resampled
 #' classification trees
 #'
-#' This function, together with companion function \code{dsmartR} implements the
+#' This function, together with companion function \code{summarise} implements the
 #' DSMART (Disaggregating and harmonising soil map units through resampled
 #' classification trees) algorithm as described in Odgers et al. (2014). This is
 #' the workhorse function that involves multiple resampling, C5 decision tree
@@ -101,6 +101,9 @@
 #'   for parallel processing.
 #' @param factors A character vector with the names of the covariates that
 #'   should be treated as factors.
+#' @param prob A character vector to specify the type of the predictions. By
+#'   default, raw class predictions are used. If set to "prob", a rasterbrick
+#'   with class probabilities will be produced for each realisation.
 #'
 #' @return A list that contains metadata about the current run of
 #'   \code{disaggregate}.
@@ -156,7 +159,7 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
                          method.model = NULL, args.model = NULL,
                          strata = NULL,
                          outputdir = getwd(), stub = NULL, cpus = 1,
-                         factors = NULL)
+                         factors = NULL,type = "raw")
 {
   # Create list to store output
   output <- base::list()
@@ -255,7 +258,7 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
                                   method.allocate = method.allocate,
                                   method.model = method.model, 
                                   args.model = args.model, stub = stub,
-                                  cpus = cpus, factors = factors)
+                                  cpus = cpus, factors = factors, type = type)
   
   # Create subdirectories to store results in
   dir.create(base::paste0(outputdir, "/output/"), showWarnings = FALSE)
@@ -458,24 +461,75 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
                              formatC(j, width = nchar(reals), format = "d",
                                      flag = "0"), ".RData"))
     
-    # Predict realisation and save it to raster
-    raster::beginCluster(cpus)
-    r1 <- raster::clusterR(covariates, predict, args = list(model),
-                           filename = paste0(outputdir, "/output/realisations/",
-                                             stub, "realisation_", formatC(j, width = nchar(reals), format = "d", flag = "0"), ".tif"),
-                           format = "GTiff", overwrite = TRUE, datatype = "INT2S")
-    
-    # If levels were dropped from soil_class in order to use the train function,
-    # the prediction raster must be reclassified in order to ensure that the integer
-    # values represent the same soil types across the realizations.
-    if(zeroes == TRUE & is.null(method.model) == FALSE)
+    if(type != "prob")
     {
-      r1 <- raster::clusterR(r1, reclassify, args = list(rcl = rclt),
+      # If raw class predictions are specified (default), predict realisation and save it to 
+      # raster.
+      raster::beginCluster(cpus)
+      r1 <- raster::clusterR(covariates, predict, args = list(model),
                              filename = paste0(outputdir, "/output/realisations/",
                                                stub, "realisation_", formatC(j, width = nchar(reals), format = "d", flag = "0"), ".tif"),
                              format = "GTiff", overwrite = TRUE, datatype = "INT2S")
+      
+      # If levels were dropped from soil_class in order to use the train function,
+      # the prediction raster must be reclassified in order to ensure that the integer
+      # values represent the same soil types across the realizations.
+      if(zeroes == TRUE & is.null(method.model) == FALSE)
+      {
+        r1 <- raster::clusterR(r1, reclassify, args = list(rcl = rclt),
+                               filename = paste0(outputdir, "/output/realisations/",
+                                                 stub, "realisation_", formatC(j, width = nchar(reals), format = "d", flag = "0"), ".tif"),
+                               format = "GTiff", overwrite = TRUE, datatype = "INT2S")
+      }
+      raster::endCluster()
+    }else{
+      # If probabilistic predictions are specified, produce a raster brick with the
+      # probabilities of each soil class.
+      if(zeroes == FALSE | is.null(method.model)){
+        # If no levels were dropped from soil_class in order to use the train function,
+        # the rasterbrick can be used as it is.
+        raster::beginCluster(cpus)
+        r1 <- raster::clusterR(covariates, predict, args = list(model
+                                                                , type = "prob"
+                                                                , index = 1:nrow(lookup)
+                                                                , na.rm = TRUE
+        ),
+                               filename = paste0(outputdir, "/output/realisations/",
+                                                 stub, "realisation_", formatC(j, width = nchar(reals), format = "d", flag = "0"), ".tif"),
+                               format = "GTiff", overwrite = TRUE, datatype = "FLT4S")
+        raster::endCluster()
+      }else{
+        # If levels were dropped from soil_class in order to use the train function, rasters
+        # with probabilities for the missing levels must be inserted in the rasterbrick.
+        # First, the rasterbrick is predicted as above.
+        raster::beginCluster(cpus)
+        tmp1 <- raster::clusterR(covariates, predict, args = list(model
+                                                                , type = "prob"
+                                                                , index = 1:nrow(lookup)
+                                                                , na.rm = TRUE))
+        # Then, a raster with 0's is calculated (the missing levels have 0 probability for the
+        # realisation in question)
+        tmp2 <- raster::clusterR(tmp1[[1]], calc, args = list(function(x) x*0))
+        raster::endCluster()
+        # The rasters are then all arranged in a rasterstack, which is converted into the
+        # final rasterbrick.
+        rlist<-list()
+        for(i in 1:nrow(lookup))
+        {
+          if(i %in% rclt[,2])
+          {
+            rlist[[i]]<-b[[which(rclt[,2] == i)]]
+          }else{
+            rlist[[i]]<-zero
+          }
+        }
+        rlist<-stack(rlist)
+        r1<-raster::brick(rlist,filename = paste0(outputdir, "/output/realisations/",
+                                                  stub, "realisation_", formatC(j, width = nchar(reals), format = "d", flag = "0"), ".tif")
+                          , format = "GTiff", overwrite = TRUE, datatype = "FLT4S")
+        rm(tmp1,tmp2)
+      }
     }
-    raster::endCluster()
   }
   
   # Save finish time

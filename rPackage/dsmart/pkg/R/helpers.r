@@ -52,7 +52,8 @@
   doParallel::registerDoParallel(cl)
   
   samples <- foreach::foreach(poly.id = polygons@data[, 1],
-                               .packages = c('raster', 'sp')) %dopar%
+                               .packages = c('raster', 'sp'),
+                              .export = ".allocate") %dopar% #It was necessary to export the .allocate function when testing on my own PC, but it may have to be deleted later.
   {
     # Subset a polygon
     poly <- base::subset(polygons, polygons@data[, 1] == poly.id)

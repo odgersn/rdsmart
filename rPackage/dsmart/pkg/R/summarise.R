@@ -10,7 +10,9 @@
 #' 
 #' @param realisations A \code{RasterStack} where each layer contains one 
 #'   realisation of the soil class distribution across the soil map area, as 
-#'   produced by \code{\link{disaggregate}}.
+#'   produced by \code{\link{disaggregate}}. If probabilistic predictions are
+#'   used (\code{type = "prob"}), a list of RasterBrick objects with predicted
+#'   class probabilities must be passed.
 #' @param lookup A two-column \code{data.frame} containing a mapping between the
 #'   integer soil class codes in the layers of \code{realisations}, and the soil
 #'   class codes defined by the map unit composition \code{data.frame} used as
@@ -34,6 +36,9 @@
 #'   placed here. Default is the current working directory, \code{getwd()}.
 #' @param stub \emph{optional} A character string that identifies a short name
 #'   that will be prepended to all output.
+#' @param prob A character vector to specify the type of the predictions to be 
+#'   summarised. By default, raw class predictions are used. If set to "prob",
+#'   probabilistic predictions are used.
 #'
 #' @return A list that contains metadata about the current run of
 #'   \code{summarise}.
@@ -64,7 +69,7 @@
 #' @export
 
 summarise <- function(realisations, lookup, n.realisations = raster::nlayers(realisations),
-                      nprob = 3, cpus = 1, outputdir = getwd(), stub = NULL)
+                      nprob = 3, cpus = 1, outputdir = getwd(), stub = NULL, type = "raw")
 {
   # Create list to store output
   output <- base::list()
@@ -74,10 +79,22 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
   
   # Check arguments before proceeding
   messages <- c("Attention is required with the following arguments:\n")
-  if(!(class(realisations) == "RasterStack"))
+  if(type != "prob")
   {
-    messages <- append(messages, "'realisations': Not a valid RasterStack.\n")
+    if(!(class(realisations) == "RasterStack"))
+    {
+      messages <- append(messages, "'realisations': Not a valid RasterStack.\n")
+    }
+  }else{
+    if(is.list(realisations) == FALSE){
+      messages <- append(messages, "'realisations' must be a list of RasterBrick objects when probabilistic predictions are used.'.\n")
+    }else{
+      if(sum(unlist(lapply(realisations, function(x) class(x) != "RasterBrick"))) > 0){
+        messages <- append(messages, "'realisations' must be a list of RasterBrick objects when probabilistic predictions are used.'.\n")
+      }
+    }
   }
+  
   if(!(class(lookup) == "data.frame"))
   {
     messages <- append(messages, "'lookup': Not a valid data.frame.\n")
@@ -128,7 +145,7 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
   
   # Save parameters
   output$parameters <- base::list(n.realisations = n.realisations,
-                                  nprob = nprob, cpus = cpus, stub = stub)
+                                  nprob = nprob, cpus = cpus, stub = stub, type = type)
   
   # Set up output directories
   dir.create(base::paste0(outputdir, "/output/"), showWarnings = FALSE)
@@ -147,28 +164,52 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
   param <- nrow(lookup)
   assign("param", param, envir = .GlobalEnv)
   
-  # Compute counts
-  raster::beginCluster(cpus)
-  counts <- raster::clusterR(realisations, calc,
-                             args = list(fun = function(x) {  
-    if (is.na(sum(x))) {
-      rep(NA, param)
-    } else {
-      tabulate(x, nbins = param)
-    }}),
-                             export = "param")
-  raster::endCluster()
-  
-  # Parameter to pass to probabilities function as a global variable
-  assign("n.realisations", n.realisations, envir = .GlobalEnv)
-  
-  # Compute probabilities
-  # probs = counts / n.realisations is faster on small datasets.
-  raster::beginCluster(cpus)
-  probs <- raster::clusterR(counts, calc,
-                            args = list(fun = function(x) {x / n.realisations}),
-                            export = "n.realisations")
-  raster::endCluster()
+  # If raw predictions are used, calculate class probabilities by counting.
+  if(type != "prob"){
+    # Compute counts
+    raster::beginCluster(cpus)
+    counts <- raster::clusterR(realisations, calc,
+                               args = list(fun = function(x) {  
+                                 if (is.na(sum(x))) {
+                                   rep(NA, param)
+                                 } else {
+                                   tabulate(x, nbins = param)
+                                 }}),
+                               export = "param")
+    raster::endCluster()
+    
+    # Parameter to pass to probabilities function as a global variable
+    assign("n.realisations", n.realisations, envir = .GlobalEnv)
+    
+    # Compute probabilities
+    # probs = counts / n.realisations is faster on small datasets.
+    raster::beginCluster(cpus)
+    probs <- raster::clusterR(counts, calc,
+                              args = list(fun = function(x) {x / n.realisations}),
+                              export = "n.realisations")
+    raster::endCluster()
+  }else{
+    # If probabilistic predictions are used, calculate class probabilities by averaging
+    # the predicted probabilities across the realisations.
+    # If only one realisation is used, no averaging is needed.
+    if(length(realisations) == 1 | n.realisations == 1){
+      probs <- realisations[[1]]
+    }else{
+      raster::beginCluster(cpus)
+      probs<-list()
+      for(i in 1:param)
+      {
+        rlist<-list()
+        for(j in 1:n.realisations){
+          rlist[[j]]<-realisations[[j]][[i]]
+        }
+        rlist<-stack(rlist)
+        probs[[i]]<-raster::clusterR(rlist, calc,args = list(fun = mean))
+      }
+      raster::endCluster()
+      probs<-stack(probs)
+    }
+  }
   
   # Write probabilities to raster files
   for(i in 1:raster::nlayers(probs))
@@ -181,13 +222,27 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
   # Compute the class indices of the n-most-probable soil classes
   assign("nprob", nprob, envir = .GlobalEnv)
   raster::beginCluster(cpus)
-  ordered.indices = raster::clusterR(counts, calc, 
-                                     args = list(fun = function(x) {
-    if (is.na(sum(x))) {
-      rep(NA, nprob)
-    } else { 
-      order(x, decreasing = TRUE, na.last = TRUE)[1:nprob] 
-    }}))
+  if(type != "prob")
+  {
+    # If raw class predictions are used, use "counts" for indicing.
+    ordered.indices = raster::clusterR(counts, calc, 
+                                       args = list(fun = function(x) {
+                                         if (is.na(sum(x))) {
+                                           rep(NA, nprob)
+                                         } else { 
+                                           order(x, decreasing = TRUE, na.last = TRUE)[1:nprob] 
+                                         }}))
+  }else{
+    # If probabilistic predictions are used, use "probs" for indicing.
+    ordered.indices = raster::clusterR(probs, calc, 
+                                       args = list(fun = function(x) {
+                                         if (is.na(sum(x))) {
+                                           rep(NA, nprob)
+                                         } else { 
+                                           order(x, decreasing = TRUE, na.last = TRUE)[1:nprob] 
+                                         }}))
+  }
+  
   raster::endCluster()
   
   # Compute the class probabilities of the n-most-probable soil classes

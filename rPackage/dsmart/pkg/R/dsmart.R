@@ -82,6 +82,13 @@
 #'   for parallel processing.
 #' @param factors A character vector with the names of the covariates that should
 #'   be treated as factors.
+#' @param prob A character vector to specify the type of the predictions. By
+#'   default, raw class predictions are used. Each realisation will produce a 
+#'   map of soil classes, and class probabilities will be calculated from the
+#'   frequency of each class across the realisations. If set to "prob", each
+#'   realisation will produce a rasterbrick with the probabilities of each class.
+#'   The final class probabilities will be calculated by averaging the class
+#'   probabilities across the realisation.
 #'   
 #' @return A list that aggregates metadata about the current run of
 #'   \code{disaggregate} and \code{summarise}.
@@ -124,7 +131,7 @@ dsmart <- function(covariates, polygons, composition, rate = 15, reals = 100,
                    method.model = NULL, args.model = NULL,
                    strata = NULL, nprob = 3,
                    outputdir = getwd(), stub = NULL, cpus = 1,
-                   factors = NULL)
+                   factors = NULL, type = "raw")
 {
   # Create list to store output
   output <- base::list()
@@ -171,17 +178,31 @@ dsmart <- function(covariates, polygons, composition, rate = 15, reals = 100,
                                       method.model = method.model,
                                       args.model = args.model,
                                       strata = strata, outputdir = outputdir,
-                                      stub = stub, factors = factors)
+                                      stub = stub, factors = factors, type = type)
   
-  # Load realisations to RasterStack
-  realisations <- raster::stack()
-  for(filename in base::list.files(path = paste0(outputdir, "/output/realisations/"),
-                                   pattern = ".tif$", full.names = TRUE))
+  # If raw class predictions are used, load realisations to RasterStack
+  if(type != "prob")
   {
-    r <- raster::raster(filename)
-    
-    # Load raster to stack
-    realisations <- raster::stack(realisations, r)
+    realisations <- raster::stack()
+    for(filename in base::list.files(path = paste0(outputdir, "/output/realisations/"),
+                                     pattern = ".tif$", full.names = TRUE))
+    {
+      r <- raster::raster(filename)
+      
+      # Load raster to stack
+      realisations <- raster::stack(realisations, r)
+    }
+  }else{
+    # If probabilistic class predictions are used, load realisations to a list of RasterBrick
+    # objects.
+    realisations <- list()
+    i<-1
+    for(filename in base::list.files(path = paste0(outputdir, "/output/realisations/"),
+                                     pattern = ".tif$", full.names = TRUE))
+    {
+      realisations[[i]] <- raster::brick(filename)
+      i<-i+1
+    }
   }
   
   # Load lookup table
@@ -191,7 +212,7 @@ dsmart <- function(covariates, polygons, composition, rate = 15, reals = 100,
   # Summarise the results of the spatial disaggregation
   output$summarise <- summarise(realisations, lookup, n.realisations = reals,
                                 nprob = nprob, cpus = cpus, 
-                                outputdir = outputdir, stub = stub)
+                                outputdir = outputdir, stub = stub, type = type)
   
   # Save finish time
   output$timing$finish <- base::date()
