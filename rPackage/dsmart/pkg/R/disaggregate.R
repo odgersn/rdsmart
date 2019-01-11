@@ -1,7 +1,7 @@
 #' Disaggregating and harmonising soil map units through resampled
 #' classification trees
 #'
-#' This function, together with companion function \code{dsmartR} implements the
+#' This function, together with companion function \code{summarise} implements the
 #' DSMART (Disaggregating and harmonising soil map units through resampled
 #' classification trees) algorithm as described in Odgers et al. (2014). This is
 #' the workhorse function that involves multiple resampling, C5 decision tree
@@ -101,6 +101,9 @@
 #'   for parallel processing.
 #' @param factors A character vector with the names of the covariates that
 #'   should be treated as factors.
+#' @param prob A character vector to specify the type of the predictions. By
+#'   default, raw class predictions are used. If set to "prob", a rasterbrick
+#'   with class probabilities will be produced for each realisation.
 #'
 #' @return A list that contains metadata about the current run of
 #'   \code{disaggregate}.
@@ -156,7 +159,7 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
                          method.model = NULL, args.model = NULL,
                          strata = NULL,
                          outputdir = getwd(), stub = NULL, cpus = 1,
-                         factors = NULL)
+                         factors = NULL,type = "raw")
 {
   # Create list to store output
   output <- base::list()
@@ -249,7 +252,7 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
                                   method.allocate = method.allocate,
                                   method.model = method.model, 
                                   args.model = args.model, stub = stub,
-                                  cpus = cpus, factors = factors)
+                                  cpus = cpus, factors = factors, type = type)
   
   # Create subdirectories to store results in
   outputdir <- file.path(outputdir)
@@ -417,11 +420,22 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
     for(i in 1:length(fcols)){
     s[,fcols[i]]<-as.factor(s[,fcols[i]])
     }}
+    
+    # Test if there are levels in soil_class with 0 cases
+    # (this is used for a workaround, see below).
+    zeroes<-sum(table(soil_class) == 0) > 0
+    
+    # If there are levels with 0 cases, make a reclassification table for the prediction raster.
+    rclt<-cbind(c(1:sum(table(soil_class) != 0))
+                , c(1:length(table(soil_class)))[table(soil_class) != 0]
+    )
 
     # Fit model
     if(is.null(method.model)){
     model = C50::C5.0(s, y = soil_class)
     }else{
+    # The train function does not accept factors in which there are levels which have 0 cases.
+    # These levels must therefore be dropped.
     soil_class <- base::droplevels(soil_class)
     model = base::do.call(caret::train,c(list(x = s, y = soil_class, method = method.model),args.model))
     }
@@ -444,15 +458,84 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
                                  formatC(j, width = nchar(reals), format = "d", flag = "0"),
                                  ".RData")))
     
-    # Predict realisation and save it to raster
-    raster::beginCluster(cpus)
-    r1 <- raster::clusterR(covariates, predict, args = list(model),
-                           filename = file.path(outputdir, "output", "realisations",
-                                                paste0(stub, "realisation_",
-                                                       formatC(j, width = nchar(reals), format = "d", flag = "0"),
-                                                       ".tif")),
-                           format = "GTiff", overwrite = TRUE, datatype = "INT2S")
-    raster::endCluster()
+    if(type != "prob")
+    {
+      # If raw class predictions are specified (default), predict realisation and save it to 
+      # raster.
+      raster::beginCluster(cpus)
+      r1 <- raster::clusterR(covariates, predict, args = list(model),
+                             filename = file.path(outputdir, "output", "realisations",
+                                                  paste0(stub, "realisation_", 
+                                                         formatC(j, width = nchar(reals), format = "d", flag = "0"),
+                                                         ".tif")),
+                             format = "GTiff", overwrite = TRUE, datatype = "INT2S")
+      
+      # If levels were dropped from soil_class in order to use the train function,
+      # the prediction raster must be reclassified in order to ensure that the integer
+      # values represent the same soil types across the realizations.
+      if(zeroes == TRUE & is.null(method.model) == FALSE)
+      {
+        r1 <- raster::clusterR(r1, reclassify, args = list(rcl = rclt),
+                               filename = file.path(outputdir, "output", "realisations",
+                                                    paste0(stub, "realisation_", 
+                                                           formatC(j, width = nchar(reals), format = "d", flag = "0"),
+                                                           ".tif")),
+                               format = "GTiff", overwrite = TRUE, datatype = "INT2S")
+      }
+      raster::endCluster()
+      
+    }else{
+      # If probabilistic predictions are specified, produce a raster brick with the
+      # probabilities of each soil class.
+      if(zeroes == FALSE | is.null(method.model)){
+        # If no levels were dropped from soil_class in order to use the train function,
+        # the rasterbrick can be used as it is.
+        raster::beginCluster(cpus)
+        r1 <- raster::clusterR(covariates, predict, args = list(model
+                                                                , type = "prob"
+                                                                , index = 1:nrow(lookup)
+                                                                , na.rm = TRUE
+        ),
+                               filename = file.path(outputdir, "output", "realisations",
+                                                    paste0(stub, "realisation_",
+                                                           formatC(j, width = nchar(reals), format = "d", flag = "0"),
+                                                           ".tif")),
+                               format = "GTiff", overwrite = TRUE, datatype = "FLT4S")
+        raster::endCluster()
+        
+      }else{
+        # If levels were dropped from soil_class in order to use the train function, rasters
+        # with probabilities for the missing levels must be inserted in the rasterbrick.
+        # First, the rasterbrick is predicted as above.
+        raster::beginCluster(cpus)
+        tmp1 <- raster::clusterR(covariates, predict, args = list(model
+                                                                , type = "prob"
+                                                                , index = 1:base::length(base::levels(soil_class))
+                                                                , na.rm = TRUE))
+        # Then, a raster with 0's is calculated (the missing levels have 0 probability for the
+        # realisation in question)
+        tmp2 <- raster::clusterR(tmp1[[1]], calc, args = list(function(x) x*0))
+        raster::endCluster()
+        # The rasters are then all arranged in a rasterstack, which is converted into the
+        # final rasterbrick.
+        rlist<-list()
+        for(i in 1:nrow(lookup))
+        {
+          if(i %in% rclt[,2])
+          {
+            rlist[[i]]<-tmp1[[which(rclt[,2] == i)]]
+          }else{
+            rlist[[i]]<-tmp2
+          }
+        }
+        rlist<-stack(rlist)
+        r1<-raster::brick(rlist, filename = file.path(outputdir, "output", "realisations",
+                                                      paste0(stub, "realisation_", formatC(j, width = nchar(reals), format = "d", flag = "0"),
+                                                             ".tif")),
+                          format = "GTiff", overwrite = TRUE, datatype = "FLT4S")
+        rm(tmp1,tmp2)
+      }
+    }
   }
   
   # Save finish time
