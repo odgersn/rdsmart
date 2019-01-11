@@ -146,13 +146,9 @@ dsmart <- function(covariates, polygons, composition, rate = 15, reals = 100,
     stub <- paste0(stub, "_")
   }
   
-  # Strip trailing / of outputdir, if it exists
-  if(substr(outputdir, nchar(outputdir), nchar(outputdir) + 1) == "/")
-  {
-    outputdir <- substr(outputdir, 1, nchar(outputdir) - 1)
-  }
-  
-  dir.create(paste0(outputdir, "/output/"), showWarnings = FALSE)
+  # Create output directory
+  outputdir <- file.path(outputdir)
+  dir.create(file.path(outputdir, "output"), showWarnings = FALSE)
   
   # Write function call to text file as a means of preserving the parameters
   # that were submitted to the dsmart function for the current run.
@@ -160,7 +156,7 @@ dsmart <- function(covariates, polygons, composition, rate = 15, reals = 100,
   # from the called function as a list element together with other output.
   base::match.call() %>%
     base::deparse() %>%
-    base::write(file = paste0(outputdir, "/output/dsmart_function_call.txt"))
+    base::write(file = file.path(outputdir, "output", "dsmart_function_call.txt"))
   
   # Carry out spatial disaggregation
   output$disaggregate <- disaggregate(covariates, polygons, composition,
@@ -175,7 +171,7 @@ dsmart <- function(covariates, polygons, composition, rate = 15, reals = 100,
   
   # Load realisations to RasterStack
   realisations <- raster::stack()
-  for(filename in base::list.files(path = paste0(outputdir, "/output/realisations/"),
+  for(filename in base::list.files(path = file.path(outputdir, "output", "realisations"),
                                    pattern = ".tif$", full.names = TRUE))
   {
     r <- raster::raster(filename)
@@ -185,7 +181,7 @@ dsmart <- function(covariates, polygons, composition, rate = 15, reals = 100,
   }
   
   # Load lookup table
-  lookup <- read.table(paste0(outputdir, "/output/", stub,"lookup.txt"),
+  lookup <- read.table(file.path(outputdir, "output", paste0(stub,"lookup.txt")),
                        header = TRUE, sep = ",")
   
   # Summarise the results of the spatial disaggregation

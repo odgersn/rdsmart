@@ -7,9 +7,9 @@ classification trees}
 \usage{
 dsmart(covariates, polygons, composition, rate = 15, reals = 100,
   observations = NULL, method.sample = "by_polygon",
-  method.allocate = "weighted", method.model = NULL, args.model = NULL,
-  strata = NULL, nprob = 3, outputdir = getwd(), stub = NULL,
-  cpus = 1, factors = NULL)
+  method.allocate = "weighted", method.model = NULL,
+  args.model = NULL, strata = NULL, nprob = 3, outputdir = getwd(),
+  stub = NULL, cpus = 1, factors = NULL)
 }
 \arguments{
 \item{covariates}{A \code{RasterStack} of \emph{scorpan} environmental 

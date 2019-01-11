@@ -226,12 +226,6 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
   require(caret)
   }
   
-  # Strip trailing / of outputdir, if it exists
-  if(substr(outputdir, nchar(outputdir), nchar(outputdir) + 1) == "/")
-  {
-    outputdir <- substr(outputdir, 1, nchar(outputdir) - 1)
-  }
-  
   # Set stub to "" if NULL
   if(is.null(stub))
   {
@@ -258,14 +252,15 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
                                   cpus = cpus, factors = factors)
   
   # Create subdirectories to store results in
-  dir.create(base::paste0(outputdir, "/output/"), showWarnings = FALSE)
-  dir.create(base::paste0(outputdir, "/output/realisations"), showWarnings = FALSE)
-  dir.create(base::paste0(outputdir, "/output/models"), showWarnings = FALSE)
+  outputdir <- file.path(outputdir)
+  dir.create(file.path(outputdir, "output"), showWarnings = FALSE)
+  dir.create(file.path(outputdir, "output", "realisations"), showWarnings = FALSE)
+  dir.create(file.path(outputdir, "output", "models"), showWarnings = FALSE)
   
   # Save output locations
-  output$locations <- list(root = base::paste0(outputdir, "/output/"),
-                           realisations = base::paste0(outputdir, "/output/realisations/"),
-                           models = base::paste0(outputdir, "/output/models/"))
+  output$locations <- list(root = file.path(outputdir, "output"),
+                           realisations = file.path(outputdir, "output", "realisations"),
+                           models = file.path(outputdir, "output", "models"))
   
   # Rename composition column names
   if(!(is.null(strata))) {
@@ -314,8 +309,8 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
     
   
   # Write covariate names to file
-  write.table(names(covariates), paste0(outputdir, "/output/", stub,
-                                        "covariate_names.txt"),
+  write.table(names(covariates), file.path(outputdir, "output",
+                                           paste0(stub, "covariate_names.txt")),
               quote = FALSE, sep = ",", row.names = FALSE, col.names = FALSE)
   
   # Get samples for all realisations
@@ -349,14 +344,14 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
   { 
     names(observations) <- c("x", "y", "class")
     observations <- .observations(observations, covariates)
-    write.table(observations, paste0(outputdir, "/output/", stub,
-                                     "observations_with_covariates.txt"),
+    write.table(observations, file.path(outputdir, "output",
+                                        paste0(stub, "observations_with_covariates.txt")),
                 sep = ",", quote = FALSE, col.names = TRUE, row.names = FALSE)
   }
   
   # Write samples to text file
-  write.table(samples, paste0(outputdir, "/output/", stub,
-                              "virtual_samples.txt"),
+  write.table(samples, file.path(outputdir, "output",
+                                 paste0(stub, "virtual_samples.txt")),
               sep = ",", quote = FALSE, col.names = TRUE, row.names = FALSE)
   
   # We submit the target classes to C5.0 as a factor. To do that, we need to 
@@ -384,9 +379,9 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
   colnames(lookup) = c("name", "code")
   
   # Write lookup table to file
-  write.table(lookup, paste0(outputdir, "/output/", stub, "lookup.txt"),
+  write.table(lookup, file.path(outputdir, "output", paste0(stub, "lookup.txt")),
               sep = ",", quote = FALSE, col.names = TRUE, row.names = FALSE)
-  output$locations$lookup <- paste0(outputdir, "/output/", stub, "lookup.txt")
+  output$locations$lookup <- file.path(outputdir, "output", paste0(stub, "lookup.txt"))
   
   # Process realisations
   for (j in 1:reals)
@@ -443,15 +438,19 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
         sep = "\n", append = TRUE)
     
     # Save model to rdata file
-    save(model, file = paste0(outputdir, "/output/models/", stub, "model_",
-                             formatC(j, width = nchar(reals), format = "d",
-                                     flag = "0"), ".RData"))
+    save(model, 
+         file = file.path(outputdir, "output", "models", 
+                          paste0(stub, "model_",
+                                 formatC(j, width = nchar(reals), format = "d", flag = "0"),
+                                 ".RData")))
     
     # Predict realisation and save it to raster
     raster::beginCluster(cpus)
     r1 <- raster::clusterR(covariates, predict, args = list(model),
-                           filename = paste0(outputdir, "/output/realisations/",
-                                             stub, "realisation_", formatC(j, width = nchar(reals), format = "d", flag = "0"), ".tif"),
+                           filename = file.path(outputdir, "output", "realisations",
+                                                paste0(stub, "realisation_",
+                                                       formatC(j, width = nchar(reals), format = "d", flag = "0"),
+                                                       ".tif")),
                            format = "GTiff", overwrite = TRUE, datatype = "INT2S")
     raster::endCluster()
   }

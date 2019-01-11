@@ -103,12 +103,6 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
     stop(messages)
   }
   
-  # Strip trailing / of outputdir, if it exists
-  if(substr(outputdir, nchar(outputdir), nchar(outputdir) + 1) == "/")
-  {
-    outputdir <- substr(outputdir, 1, nchar(outputdir) - 1)
-  }
-  
   # Set stub to "" if NULL
   if(is.null(stub))
   {
@@ -131,14 +125,15 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
                                   nprob = nprob, cpus = cpus, stub = stub)
   
   # Set up output directories
-  dir.create(base::paste0(outputdir, "/output/"), showWarnings = FALSE)
-  dir.create(base::paste0(outputdir, "/output/probabilities/"), showWarnings = FALSE)
-  dir.create(base::paste0(outputdir, "/output/mostprobable/"), showWarnings = FALSE)
+  outputdir <- file.path(outputdir)
+  dir.create(file.path(outputdir, "output"), showWarnings = FALSE)
+  dir.create(file.path(outputdir, "output", "probabilities"), showWarnings = FALSE)
+  dir.create(file.path(outputdir, "output", "mostprobable"), showWarnings = FALSE)
   
   # Save output locations
-  output$locations <- base::list(root = base::paste0(outputdir, "/output/"),
-                                 probabilities = base::paste0(outputdir, "/output/probabilities/"),
-                                 mostprobable = base::paste0(outputdir, "/output/mostprobable/"))
+  output$locations <- base::list(root = file.path(outputdir, "output"),
+                                 probabilities = file.path(outputdir, "output", "probabilities"),
+                                 mostprobable = file.path(outputdir, "output", "mostprobable"))
   
   # Make sure lookup table column names are correct
   names(lookup) <- c("name", "code")
@@ -174,7 +169,8 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
   for(i in 1:raster::nlayers(probs))
   {
     raster::writeRaster((probs[[i]]),
-                        filename = paste0(outputdir, "/output/probabilities/", stub, "prob_", lookup$name[which(lookup$code == i)], ".tif"),
+                        filename = file.path(outputdir, "output", "probabilities",
+                                             paste0(stub, "prob_", lookup$name[which(lookup$code == i)], ".tif")),
                         format = "GTiff", overwrite = TRUE)
   }
   
@@ -206,14 +202,18 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
   {
     # Write ith-most-probable soil class raster to file
     raster::writeRaster(ordered.indices[[i]],
-                        filename = paste0(outputdir, "/output/mostprobable/", stub, "mostprob_",
-                                          formatC(i, width = nchar(nrow(lookup)), format = "d", flag = "0"), "_class.tif"),
+                        filename = file.path(outputdir, "output", "mostprobable",
+                                             paste0(stub, "mostprob_",
+                                                    formatC(i, width = nchar(nrow(lookup)), format = "d", flag = "0"),
+                                                    "_class.tif")),
                         format = "GTiff", overwrite = TRUE)
     
     # Write ith-most-probable soil class probability raster to file
     raster::writeRaster(ordered.probs[[i]],
-                        filename = paste0(outputdir, "/output/mostprobable/", stub, "mostprob_",
-                                          formatC(i, width = nchar(nrow(lookup)), format = "d", flag = "0"), "_probs.tif"),
+                        filename = file.path(outputdir, "output", "mostprobable",
+                                             paste0(stub, "mostprob_",
+                                                    formatC(i, width = nchar(nrow(lookup)), format = "d", flag = "0"),
+                                                    "_probs.tif")),
                         format = "GTiff", overwrite = TRUE)
   }
 
@@ -221,7 +221,9 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
   # and write it to file
   raster::beginCluster(cpus)
   confusion <- raster::clusterR(ordered.probs, fun = function(x) (1 - (x[[1]] - x[[2]])),
-                                filename = paste0(outputdir, "/output/mostprobable/", stub, "confusion.tif"), format = "GTiff", overwrite = TRUE)
+                                filename = file.path(outputdir, "output", "mostprobable",
+                                                     paste0(stub, "confusion.tif")),
+                                format = "GTiff", overwrite = TRUE)
   raster::endCluster()
   
   # Save finish time

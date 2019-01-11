@@ -231,7 +231,8 @@
           
         } else {
         # Class weights (proportions)
-        stratum.weights <- composition[which((composition$poly == poly.id) & (composition$stratum == stratum)), 5]
+        stratum.weights <- composition[which((composition$poly == poly.id) &
+                                               (composition$stratum == stratum)), 5]
           
         # Perform allocation
         alloc <- .allocate(stratum.classes, n = stratum.n, method = "weighted",

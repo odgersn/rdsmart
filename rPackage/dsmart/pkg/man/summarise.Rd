@@ -5,8 +5,8 @@
 \title{Summarise the results of a DSMART spatial disaggregation.}
 \usage{
 summarise(realisations, lookup,
-  n.realisations = raster::nlayers(realisations), nprob = 3, cpus = 1,
-  outputdir = getwd(), stub = NULL)
+  n.realisations = raster::nlayers(realisations), nprob = 3,
+  cpus = 1, outputdir = getwd(), stub = NULL)
 }
 \arguments{
 \item{realisations}{A \code{RasterStack} where each layer contains one 
