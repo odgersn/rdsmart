@@ -5,8 +5,9 @@
 #' occurrence of the soil classes that occur across all the map's map units. 
 #' Second, it ranks the soil class predictions according to their probabilities 
 #' of occurrence and maps the \emph{n}-most-probable soil classes at each grid 
-#' cell, and their probabilities. Finally, it computes the degree of confusion 
-#' between the most probable and second-most-probable soil classes.
+#' cell, and their probabilities. Finally, it computes Shannon's entropy on the
+#' class probabilities, and the degree of confusion between the most probable 
+#' and second-most-probable soil classes.
 #' 
 #' @param realisations A \code{RasterStack} where each layer contains one 
 #'   realisation of the soil class distribution across the soil map area, as 
@@ -272,13 +273,37 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
                         format = "GTiff", overwrite = TRUE)
   }
 
-  # Compute the confusion index between the most probable and second-most-probable soil classes
-  # and write it to file
+  # Start a parallel cluster
   raster::beginCluster(cpus)
-  confusion <- raster::clusterR(ordered.probs, fun = function(x) (1 - (x[[1]] - x[[2]])),
+  
+  # Compute the confusion index on the class probabilities
+  confusion <- raster::clusterR(ordered.probs,
+                                fun = function(x) { 
+                                  (1 - (x[[1]] - x[[2]]))
+                                  },
                                 filename = file.path(outputdir, "output", "mostprobable",
                                                      paste0(stub, "confusion.tif")),
-                                format = "GTiff", overwrite = TRUE)
+                                format = "GTiff", 
+                                overwrite = TRUE,
+                                NAflag = -9999.0)
+  
+  # Compute Shannon's entropy on the class probabilities
+  # See rationale in section 2.5 of Kempen et al. (2009) "Updating the 1:50,000
+  # Dutch soil map"
+  shannon <- raster::clusterR(ordered.probs,
+                              fun = function(x) {
+                                x %>%
+                                  magrittr::multiply_by(log(x, base = length(x))) %>%
+                                  sum(na.rm = TRUE) %>% 
+                                  magrittr::multiply_by(-1)
+                                },
+                              filename = file.path(outputdir, "output", "mostprobable",
+                                                   paste0(stub, "shannon.tif")),
+                              format = "GTiff",
+                              overwrite = TRUE, 
+                              NAflag = -9999.0)
+  
+  # Close the parallel cluster
   raster::endCluster()
   
   # Save finish time
