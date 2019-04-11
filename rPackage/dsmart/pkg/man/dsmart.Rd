@@ -9,7 +9,7 @@ dsmart(covariates, polygons, composition, rate = 15, reals = 100,
   observations = NULL, method.sample = "by_polygon",
   method.allocate = "weighted", method.model = NULL,
   args.model = NULL, strata = NULL, nprob = 3, outputdir = getwd(),
-  stub = NULL, cpus = 1, factors = NULL)
+  stub = NULL, cpus = 1, factors = NULL, type = "raw")
 }
 \arguments{
 \item{covariates}{A \code{RasterStack} of \emph{scorpan} environmental 
@@ -103,6 +103,14 @@ be treated as factors.}
 \item{method.args}{A list of arguments to be passed to the caret::train function.
 The list can include a trainControl object, arguments to be passed directly
 to the train function and arguments to be passed to the predictive model.}
+
+\item{prob}{A character vector to specify the type of the predictions. By
+default, raw class predictions are used. Each realisation will produce a 
+map of soil classes, and class probabilities will be calculated from the
+frequency of each class across the realisations. If set to "prob", each
+realisation will produce a rasterbrick with the probabilities of each class.
+The final class probabilities will be calculated by averaging the class
+probabilities across the realisation.}
 }
 \value{
 A list that aggregates metadata about the current run of

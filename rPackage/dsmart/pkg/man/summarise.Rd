@@ -6,12 +6,14 @@
 \usage{
 summarise(realisations, lookup,
   n.realisations = raster::nlayers(realisations), nprob = 3,
-  cpus = 1, outputdir = getwd(), stub = NULL)
+  cpus = 1, outputdir = getwd(), stub = NULL, type = "raw")
 }
 \arguments{
 \item{realisations}{A \code{RasterStack} where each layer contains one 
 realisation of the soil class distribution across the soil map area, as 
-produced by \code{\link{disaggregate}}.}
+produced by \code{\link{disaggregate}}. If probabilistic predictions are
+used (\code{type = "prob"}), a list of RasterBrick objects with predicted
+class probabilities must be passed.}
 
 \item{lookup}{A two-column \code{data.frame} containing a mapping between the
 integer soil class codes in the layers of \code{realisations}, and the soil
@@ -41,6 +43,10 @@ placed here. Default is the current working directory, \code{getwd()}.}
 
 \item{stub}{\emph{optional} A character string that identifies a short name
 that will be prepended to all output.}
+
+\item{prob}{A character vector to specify the type of the predictions to be 
+summarised. By default, raw class predictions are used. If set to "prob",
+probabilistic predictions are used.}
 }
 \value{
 A list that contains metadata about the current run of
@@ -52,8 +58,9 @@ polygon soil map in several ways. First, it computes the probabilities of
 occurrence of the soil classes that occur across all the map's map units. 
 Second, it ranks the soil class predictions according to their probabilities 
 of occurrence and maps the \emph{n}-most-probable soil classes at each grid 
-cell, and their probabilities. Finally, it computes the degree of confusion 
-between the most probable and second-most-probable soil classes.
+cell, and their probabilities. Finally, it computes Shannon's entropy on the
+class probabilities, and the degree of confusion between the most probable 
+and second-most-probable soil classes.
 }
 \examples{
 # Load datasets

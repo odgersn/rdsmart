@@ -55,87 +55,12 @@
                                .packages = c('raster', 'sp'),
                               .export = ".allocate") %dopar% #It was necessary to export the .allocate function when testing on my own PC, but it may have to be deleted later.
   {
-    # Subset a polygon
-    poly <- base::subset(polygons, polygons@data[, 1] == poly.id)
+    # Get samples for a polygon
+    poly.samples <- .sampler(covariates, polygons, composition,
+                             poly.id, n.realisations, rate,
+                             method.sample = "by_polygon", 
+                             method.allocate = "weighted")
     
-    # If sample = "area", determine the correct number of samples to take
-    n.samples <- 0
-    if(method.sample == "by_area") {
-    
-      # Compute area of polygon in square kilometres
-      # FOR NOW, assumes that CRS of polygons is projected and with units of m.
-      # The area function of the raster package also gives the area in square
-      # metres for longitude/latitude coordinate systems.
-      area <- raster::area(poly) / 1e6
-      
-      if(area < 1.0)
-      {
-        area <- 1.0
-      }
-      
-      # Compute number of samples to take
-      n.samples <- rate * base::trunc(area)
-    } else if(method.sample == "by_polygon") {
-      n.samples <- rate
-    } else stop("Sampling method \"", method.sample, "\" is unknown")
-    
-    # Extract covariates of all grid cells that intersect with the polygon
-    # Retain only those cells that do not have NA in their covariates
-    poly.cells <- as.data.frame(raster::extract(covariates, poly, 
-                                                cellnumbers = TRUE))
-    poly.cells <- poly.cells[base::which(stats::complete.cases(poly.cells)), ]
-    
-    # Sample grid cells with replacement for ALL realisations in one go
-    poly.samples <- poly.cells[base::sample(base::nrow(poly.cells),
-                                            replace = TRUE,
-                                            size = n.samples * n.realisations), ]
-    
-    # Allocate all samples to a soil class
-    soil_class <- character()
-    if(method.allocate == "weighted") {
-      # Weighted random allocation
-      poly.classes <- base::as.character(composition[base::which(composition[, 1] == poly.id), 3])
-      poly.weights <- composition[base::which(composition[, 1] == poly.id), 4]
-      
-      if(length(poly.classes) == 0) {
-        stop(paste0("No map unit composition for polygon ", poly.id))
-      } else {
-        soil_class <- .allocate(poly.classes, n = n.samples * n.realisations, 
-                                method = "weighted", weights = poly.weights)
-      }
-    } else if(method.allocate == "random-mapunit") {
-      # Random-within_map unit allocation
-      poly.classes <- as.character(composition[which(composition[, 1] == poly.id), 3])
-      
-      if(length(poly.classes) == 0) {
-        stop(paste0("No map unit composition for polygon ", poly.id))
-      } else {
-        soil_class <- .allocate(poly.classes, n = n.samples * n.realisations, 
-                                method = "random", weights = NULL)
-      }
-    } else if(method.allocate == "random-all") {
-      # Random-within_map allocation
-      poly.classes <- as.character(unique(composition[, 3]))
-      
-      if(length(poly.classes) == 0) {
-        stop("No soil classes available to allocate to")
-      } else {
-        soil_class <- .allocate(poly.classes, n = n.samples * n.realisations, 
-                                method = "random", weights = NULL)
-      }
-    } else stop("Allocation method is unknown")
-    
-    # Add realisation id, spatial coordinates, soil class to sampled grid cells
-    xy <- as.data.frame(raster::xyFromCell(covariates, poly.samples$cell))
-    meta <- list(realisation = base::rep(1:n.realisations, times = n.samples),
-                 type = base::rep("virtual", nrow(xy)),
-                 sampling = base::rep(method.sample, base::nrow(xy)),
-                 allocation = base::rep(method.allocate, base::nrow(xy)))
-    poly.samples <- cbind(as.data.frame(meta), xy, soil_class, 
-                          poly.samples[, 2:base::ncol(poly.samples)])
-    
-    # Add polygon samples to list
-    #samples <- append(samples, list(poly.samples))
     return(poly.samples)
   }
   
@@ -145,6 +70,94 @@
   samples <- data.table::rbindlist(samples)
   
   return(samples)
+}
+
+.sampler <- function(covariates, polygons, composition,
+                     poly.id, n.realisations = 100, rate = 15,
+                     method.sample = "by_polygon", 
+                     method.allocate = "weighted"){
+  # Subset a polygon
+  poly <- base::subset(polygons, polygons@data[, 1] == poly.id)
+  
+  # If sample = "area", determine the correct number of samples to take
+  n.samples <- 0
+  if(method.sample == "by_area") {
+    
+    # Compute area of polygon in square kilometres
+    # FOR NOW, assumes that CRS of polygons is projected and with units of m.
+    # The area function of the raster package also gives the area in square
+    # metres for longitude/latitude coordinate systems.
+    area <- raster::area(poly) / 1e6
+    
+    if(area < 1.0)
+    {
+      area <- 1.0
+    }
+    
+    # Compute number of samples to take
+    n.samples <- rate * base::trunc(area)
+  } else if(method.sample == "by_polygon") {
+    n.samples <- rate
+  } else stop("Sampling method \"", method.sample, "\" is unknown")
+  
+  # Extract covariates of all grid cells that intersect with the polygon
+  # Retain only those cells that do not have NA in their covariates
+  poly.cells <- as.data.frame(raster::extract(covariates, poly, 
+                                              cellnumbers = TRUE))
+  poly.cells <- poly.cells[base::which(stats::complete.cases(poly.cells)), ]
+  
+  # Sample grid cells with replacement for ALL realisations in one go
+  poly.samples <- poly.cells[base::sample(base::nrow(poly.cells),
+                                          replace = TRUE,
+                                          size = n.samples * n.realisations), ]
+  
+  # Allocate all samples to a soil class
+  soil_class <- character()
+  if(method.allocate == "weighted") {
+    # Weighted random allocation
+    poly.classes <- base::as.character(composition[base::which(composition[, 1] == poly.id), 3])
+    poly.weights <- composition[base::which(composition[, 1] == poly.id), 4]
+    
+    if(length(poly.classes) == 0) {
+      stop(paste0("No map unit composition for polygon ", poly.id))
+    } else {
+      soil_class <- .allocate(poly.classes, n = n.samples * n.realisations, 
+                              method = "weighted", weights = poly.weights)
+    }
+  } else if(method.allocate == "random-mapunit") {
+    # Random-within_map unit allocation
+    poly.classes <- as.character(composition[which(composition[, 1] == poly.id), 3])
+    
+    if(length(poly.classes) == 0) {
+      stop(paste0("No map unit composition for polygon ", poly.id))
+    } else {
+      soil_class <- .allocate(poly.classes, n = n.samples * n.realisations, 
+                              method = "random", weights = NULL)
+    }
+  } else if(method.allocate == "random-all") {
+    # Random-within_map allocation
+    poly.classes <- as.character(unique(composition[, 3]))
+    
+    if(length(poly.classes) == 0) {
+      stop("No soil classes available to allocate to")
+    } else {
+      soil_class <- .allocate(poly.classes, n = n.samples * n.realisations, 
+                              method = "random", weights = NULL)
+    }
+  } else stop("Allocation method is unknown")
+  
+  # Add realisation id, spatial coordinates, soil class to sampled grid cells
+  xy <- as.data.frame(raster::xyFromCell(covariates, poly.samples$cell))
+  meta <- list(realisation = base::rep(1:n.realisations, times = n.samples),
+               type = base::rep("virtual", nrow(xy)),
+               sampling = base::rep(method.sample, base::nrow(xy)),
+               allocation = base::rep(method.allocate, base::nrow(xy)))
+  poly.samples <- cbind(as.data.frame(meta), xy, soil_class, 
+                        poly.samples[, 2:base::ncol(poly.samples)])
+  
+  # Add polygon samples to list
+  #samples <- append(samples, list(poly.samples))
+  return(poly.samples)
 }
 
 #'Sample the polygons of a SpatialPolygonsDataFrame.

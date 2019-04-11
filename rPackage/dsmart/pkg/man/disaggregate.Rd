@@ -9,7 +9,7 @@ disaggregate(covariates, polygons, composition, rate = 15, reals = 100,
   observations = NULL, method.sample = "by_polygon",
   method.allocate = "weighted", method.model = NULL,
   args.model = NULL, strata = NULL, outputdir = getwd(),
-  stub = NULL, cpus = 1, factors = NULL)
+  stub = NULL, cpus = 1, factors = NULL, type = "raw")
 }
 \arguments{
 \item{covariates}{A \code{RasterStack} of \emph{scorpan} environmental
@@ -96,13 +96,17 @@ should be treated as factors.}
 function. The list can include a trainControl object, arguments to be
 passed directly to the train function and arguments to be passed to the
 predictive model.}
+
+\item{prob}{A character vector to specify the type of the predictions. By
+default, raw class predictions are used. If set to "prob", a rasterbrick
+with class probabilities will be produced for each realisation.}
 }
 \value{
 A list that contains metadata about the current run of
   \code{disaggregate}.
 }
 \description{
-This function, together with companion function \code{dsmartR} implements the
+This function, together with companion function \code{summarise} implements the
 DSMART (Disaggregating and harmonising soil map units through resampled
 classification trees) algorithm as described in Odgers et al. (2014). This is
 the workhorse function that involves multiple resampling, C5 decision tree
