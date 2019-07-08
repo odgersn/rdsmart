@@ -59,7 +59,7 @@
     poly.samples <- .sampler(covariates, polygons, composition,
                              poly.id, n.realisations, rate,
                              method.sample = method.sample, 
-                             method.allocate = method.allocate
+                             method.allocate = method.allocate)
     
     return(poly.samples)
   }
