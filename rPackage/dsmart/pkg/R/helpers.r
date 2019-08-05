@@ -65,6 +65,7 @@
   }
   
   parallel::stopCluster(cl)
+  foreach::registerDoSEQ()
   
   # Merge polygon sample data frames
   samples <- data.table::rbindlist(samples)
