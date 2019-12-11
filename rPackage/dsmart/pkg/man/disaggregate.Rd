@@ -9,7 +9,8 @@ disaggregate(covariates, polygons, composition, rate = 15, reals = 100,
   observations = NULL, method.sample = "by_polygon",
   method.allocate = "weighted", method.model = NULL,
   args.model = NULL, strata = NULL, outputdir = getwd(),
-  stub = NULL, cpus = 1, factors = NULL, type = "raw")
+  stub = NULL, cpus = 1, factors = NULL, type = "raw",
+  predict = TRUE)
 }
 \arguments{
 \item{covariates}{A \code{RasterStack} of \emph{scorpan} environmental

@@ -5,7 +5,7 @@ importFrom("raster", beginCluster, endCluster, clusterR, predict, extract, calc,
 importFrom("gtools", rdirichlet)
 importFrom("C50", C5.0 )
 importFrom("sp", spsample, coordinates)
-importFrom(magrittr,"%>%")
+importFrom(magrittr,"%>%", "%<>%")
 importFrom(foreach, "%dopar%")
 
 export(disaggregate)

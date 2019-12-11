@@ -76,6 +76,14 @@
                      poly.id, n.realisations = 100, rate = 15,
                      method.sample = "by_polygon", 
                      method.allocate = "weighted"){
+  # Compute a mask to sample
+  # Sum the covariates with na.rm = F so that cells with a NA value in any layer
+  # have a sum of NA. This means that we can query a single layer to find which
+  # cells have NA in the covariates, rather than the whole covariate stack,
+  # which should be a faster operation when the covariates are being read from
+  # disk.
+  #mask <- sum(covariates, na.rm = FALSE)
+  
   # Subset a polygon
   poly <- base::subset(polygons, polygons@data[, 1] == poly.id)
   
@@ -102,14 +110,26 @@
   
   # Extract covariates of all grid cells that intersect with the polygon
   # Retain only those cells that do not have NA in their covariates
-  poly.cells <- as.data.frame(raster::extract(covariates, poly, 
-                                              cellnumbers = TRUE))
-  poly.cells <- poly.cells[base::which(stats::complete.cases(poly.cells)), ]
+  poly.samples <- 
+    covariates %>% 
+    raster::extract(y = poly, cellnumbers = TRUE, df = TRUE) %>% 
+    dplyr::select(-ID) %>% 
+    dplyr::filter(complete.cases(.)) %>% 
+    dplyr::sample_n(size = (n.samples * n.realisations), replace = TRUE)
+  
+  # Extract covariates for sampled cells
+  # poly.samples <- 
+  #   raster::extract(covariates, y = cells, df = TRUE) %>% 
+  #   dplyr::mutate(cell = cells) %>% 
+  #   dplyr::select(cell, dplyr::everything(), -ID)
+  
+    # as.data.frame(raster::extract(covariates, poly, 
+    #                                           cellnumbers = TRUE))
+  
+  # poly.cells <- poly.cells[which(complete.cases(poly.cells)), ]
   
   # Sample grid cells with replacement for ALL realisations in one go
-  poly.samples <- poly.cells[base::sample(base::nrow(poly.cells),
-                                          replace = TRUE,
-                                          size = n.samples * n.realisations), ]
+  # poly.samples <- poly.cells[sample(nrow(poly.cells), replace = TRUE, size = n.samples * n.realisations), ]
   
   # Allocate all samples to a soil class
   soil_class <- character()
@@ -370,8 +390,8 @@
 }
 
 
-.observations <- function(observations, covariates)
-{
+.observations <- function(observations, covariates) {
+  
   # Rename columns for consistency with virtual samples
   base::colnames(observations) <- c("x", "y", "soil_class")
   
@@ -391,4 +411,60 @@
   # Return only those observations with no NA in the covariates
   obs <- obs[which(complete.cases(obs)), ]
   return(obs)
+}
+
+
+#' Compute raster::clusterR tuning parameter m
+#'
+#' This function computes a value for the \code{\link[raster]{clusterR}} tuning
+#' parameter \code{m}.
+#'
+#' \code{clusterR} subdivides a large raster into a set of tiles where each tile
+#' has the same number of columns as the original raster, but a smaller number
+#' of rows. The total number of tiles is equal to \code{m} * \code{n}, where
+#' \code{n} is the number of CPU cores (see \code{\link[raster]{beginCluster}})
+#' and \code{m} is the number of tiles per CPU core.
+#'
+#' This function calculates the number of tiles per CPU core, \code{m}, given
+#' the number of CPU cores, the dimensions of the overall raster, and the
+#' desired tile size expressed as the number of grid cells per tile (default
+#' value 1,000,000).
+#'
+#' If the number of grid cells in the overall raster is smaller than the desired
+#' tile size, the function returns a value of 2, which is the default value of
+#' \code{m} in \code{clusterR}.
+#'
+#' @param rows An integer that identifies the number of rows in the target grid.
+#' @param cols An integer that identifies the number of columns in the target
+#'   grid.
+#' @param cpus An integer that identifies the number of CPU nodes for parallel
+#'   processing.
+#' @param max_cells An integer that identifies the number of cells allowed in
+#'   each block.
+#'
+#' @return
+#'
+#' @examples
+.blocks_per_node <- function(rows, cols, cpus, max_cells = 1000000) {
+  
+  # Initialise tuning variable
+  m <- NA
+  
+  if(max_cells < (rows * cols)) {
+    # Compute the number of rows per block
+    block_rows <- max_cells / cols
+    
+    # Compute the number of blocks in the whole grid
+    total_blocks <- rows / block_rows
+    
+    # Compute the number of blocks per CPU
+    m <- ceiling(total_blocks / cpus)
+    
+  } else {
+    # May revise this in the future
+    m <- 2
+  }
+  
+  # Return tuning variable
+  return(m)
 }
