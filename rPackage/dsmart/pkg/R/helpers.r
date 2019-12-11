@@ -58,13 +58,14 @@
     # Get samples for a polygon
     poly.samples <- .sampler(covariates, polygons, composition,
                              poly.id, n.realisations, rate,
-                             method.sample = "by_polygon", 
-                             method.allocate = "weighted")
+                             method.sample = method.sample, 
+                             method.allocate = method.allocate)
     
     return(poly.samples)
   }
   
   parallel::stopCluster(cl)
+  foreach::registerDoSEQ()
   
   # Merge polygon sample data frames
   samples <- data.table::rbindlist(samples)
