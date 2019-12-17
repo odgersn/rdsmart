@@ -469,3 +469,30 @@
   # Return tuning variable
   return(m)
 }
+
+
+.order_classes <- function(r, cpus, n_prob = nlayers(r)) {
+  
+  # Tuning parameter to optimise block size
+  tuning <- .blocks_per_node(raster::nrow(r),
+                        raster::ncol(r),
+                        cpus = cpus)
+  
+  # Start parallel cluster
+  raster::beginCluster(cpus)
+  
+  # Order the values in the layers of `r`
+  output = raster::clusterR(r, calc, 
+                            args = list(fun = function(x) {
+                              if (is.na(sum(x))) {
+                                rep(NA, n_prob)
+                              } else { 
+                                order(x, decreasing = TRUE, na.last = TRUE)[1:n_prob] 
+                              }}),
+                            m = tuning)
+  
+  # End parallel cluster
+  raster::endCluster()
+  
+  return(output)
+}

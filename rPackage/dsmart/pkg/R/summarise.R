@@ -217,30 +217,33 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
   }
   
   # Compute the class indices of the n-most-probable soil classes
-  assign("nprob", nprob, envir = .GlobalEnv)
-  raster::beginCluster(cpus)
+  # assign("nprob", nprob, envir = .GlobalEnv)
+  # raster::beginCluster(cpus)
   if(type != "prob")
   {
     # If raw class predictions are used, use "counts" for indicing.
-    ordered.indices = raster::clusterR(counts, calc, 
-                                       args = list(fun = function(x) {
-                                         if (is.na(sum(x))) {
-                                           rep(NA, nprob)
-                                         } else { 
-                                           order(x, decreasing = TRUE, na.last = TRUE)[1:nprob] 
-                                         }}))
+    # ordered.indices = raster::clusterR(counts, calc, 
+    #                                    args = list(fun = function(x) {
+    #                                      if (is.na(sum(x))) {
+    #                                        rep(NA, nprob)
+    #                                      } else { 
+    #                                        order(x, decreasing = TRUE, na.last = TRUE)[1:nprob] 
+    #                                      }}))
+    ordered.indices <- .order_classes(counts, cpus, n_prob = nprob)
+    
   }else{
     # If probabilistic predictions are used, use "probs" for indicing.
-    ordered.indices = raster::clusterR(probs, calc, 
-                                       args = list(fun = function(x) {
-                                         if (is.na(sum(x))) {
-                                           rep(NA, nprob)
-                                         } else { 
-                                           order(x, decreasing = TRUE, na.last = TRUE)[1:nprob] 
-                                         }}))
+    # ordered.indices = raster::clusterR(probs, calc, 
+    #                                    args = list(fun = function(x) {
+    #                                      if (is.na(sum(x))) {
+    #                                        rep(NA, nprob)
+    #                                      } else { 
+    #                                        order(x, decreasing = TRUE, na.last = TRUE)[1:nprob] 
+    #                                      }}))
+    ordered.indices <- .order_classes(probs, cpus, n_prob = nprob)
   }
   
-  raster::endCluster()
+  # raster::endCluster()
   
   # Compute the class probabilities of the n-most-probable soil classes
   raster::beginCluster(cpus)
