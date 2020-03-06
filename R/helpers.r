@@ -471,7 +471,28 @@
 }
 
 
-.order_classes <- function(r, cpus, n_prob = nlayers(r)) {
+#' Order raster stack values
+#'
+#' This function orders the values in a raster stack. Ordering is performed on
+#' the vector of values at each grid cell. See \code{\link[base]{order}} for
+#' more information about how ordering works.
+#'
+#' The layers in the returned raster stack correspond to the rank ordering of
+#' the values in the original raster stack \code{r}. For example, the values in
+#' the first returned layer identify the layer index of the original raster
+#' stack in which the largest value was found; the values in the second returned
+#' layer identify the original layer index in which the second largest value was
+#' found, and so-on.
+#'
+#' @param r A \code{RasterStack} whose layers contain the values to be ordered.
+#' @param cpus
+#' @param n_prob
+#'
+#' @return A \code{RasterStack} containing the sorted data.
+#'
+#' @export
+#' 
+order_stack_values <- function(r, cpus, n = nlayers(r)) {
   
   # Tuning parameter to optimise block size
   tuning <- .blocks_per_node(raster::nrow(r),
@@ -485,9 +506,9 @@
   output = raster::clusterR(r, calc, 
                             args = list(fun = function(x) {
                               if (is.na(sum(x))) {
-                                rep(NA, n_prob)
+                                rep(NA, n)
                               } else { 
-                                order(x, decreasing = TRUE, na.last = TRUE)[1:n_prob] 
+                                order(x, decreasing = TRUE, na.last = TRUE)[1:n] 
                               }}),
                             m = tuning)
   
@@ -496,3 +517,87 @@
   
   return(output)
 }
+
+#' Sort raster stack values
+#'
+#' #' This function sorts the values in a raster stack. Sorting is performed on
+#' the vector of values at each grid cell. See \code{\link[base]{sort}} for more
+#' information about how ordering works.
+#'
+#' @param r A \code{RasterStack} whose layers contain the values to be sorted.
+#' @param cpus An integer that identifies the number of CPU nodes for parallel
+#'   processing.
+#' @param n An integer that identifies the number of layers in \code{r} that
+#'   should be sorted. Default is to sort all layers in \code{r}.
+#' @param decreasing A boolean that indicates whether values should be sorted in
+#'   decreasing order (\code{TRUE}) or not (\code{FALSE}).
+#'
+#' @return A \code{RasterStack} containing the sorted data.
+#'
+#' @export
+#'
+sort_stack_values <- function(r, cpus, n = nlayers(r), decreasing = TRUE) {
+  
+  # Tuning parameter to optimise block size
+  tuning <- .blocks_per_node(raster::nrow(r),
+                             raster::ncol(r),
+                             cpus = cpus)
+  
+  # Start parallel cluster
+  raster::beginCluster(cpus)
+  
+  # Sort the values in the layers of `r`
+  output = raster::clusterR(r, calc, 
+                            args = list(fun = function(x) {
+                              if (is.na(sum(x))) {
+                                rep(NA, n)
+                              } else { 
+                                sort(x, decreasing = decreasing, na.last = TRUE)[1:n]
+                              }
+                            }
+                            ),
+                            m = tuning)
+  raster::endCluster()
+  
+  return(output)
+}
+
+#' Compute confusion index
+#' 
+#' This function computes the confusion index. It first sorts the probabilities
+#' for each grid cell in descending order using \code{\link{sort_stack_values}}.
+#'
+#' @param r A RasterStack of probabilities, where each layer corresponds to a
+#'   different soil class.
+#' @param cpus An integer that identifies the number of CPU nodes for parallel
+#'   processing.
+#'
+#' @return A \code{RasterLayer} containing the confusion index data. 
+#' @export
+#'
+confusion_index <- function(r, cpus) {
+  # Tuning parameter to optimise block size
+  tuning <- .blocks_per_node(raster::nrow(r),
+                             raster::ncol(r),
+                             cpus = cpus)
+  
+  # Start parallel cluster
+  raster::beginCluster(cpus)
+  
+  output <- raster::clusterR(r,
+                             fun = function(x) { 
+                               (1 - (x[[1]] - x[[2]]))
+                             },
+                             filename = tempfile(fileext = ".tif"),
+                             format = "GTiff", 
+                             overwrite = TRUE,
+                             NAflag = -9999.0,
+                             datatype = "FLT4S",
+                             m = tuning)
+  
+  raster::endCluster()
+  
+  return(output)
+}
+
+
