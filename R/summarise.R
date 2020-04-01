@@ -229,7 +229,7 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
     #                                      } else { 
     #                                        order(x, decreasing = TRUE, na.last = TRUE)[1:nprob] 
     #                                      }}))
-    ordered.indices <- .order_classes(counts, cpus, n_prob = nprob)
+    ordered.indices <- order_stack_values(counts, cpus, n = nprob)
     
   }else{
     # If probabilistic predictions are used, use "probs" for indicing.
@@ -240,7 +240,7 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
     #                                      } else { 
     #                                        order(x, decreasing = TRUE, na.last = TRUE)[1:nprob] 
     #                                      }}))
-    ordered.indices <- .order_classes(probs, cpus, n_prob = nprob)
+    ordered.indices <- order_stack_values(probs, cpus, n = nprob)
   }
   
   # raster::endCluster()
@@ -249,12 +249,14 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
   raster::beginCluster(cpus)
   ordered.probs = raster::clusterR(probs, calc, 
                                    args = list(fun = function(x) {
-    if (is.na(sum(x))) {
-      rep(NA, max(2,nprob))
-    } else { 
-      sort(x, decreasing = TRUE, na.last = TRUE)[1:max(2,nprob)]
-    }
-  }))
+                                     if (is.na(sum(x))) {
+                                       rep(NA, max(2,nprob))
+                                     } else { 
+                                       sort(x, decreasing = TRUE, na.last = TRUE)[1:max(2,nprob)]
+                                     }
+                                   }
+                                   )
+  )
   raster::endCluster()
   
   for (i in 1:nprob)
