@@ -581,10 +581,13 @@ confusion_index <- function(r, cpus) {
                              raster::ncol(r),
                              cpus = cpus)
   
+  # Sort probability values
+  sorted <- sort_stack_values(r, cpus)
+  
   # Start parallel cluster
   raster::beginCluster(cpus)
   
-  output <- raster::clusterR(r,
+  output <- raster::clusterR(sorted,
                              fun = function(x) { 
                                (1 - (x[[1]] - x[[2]]))
                              },
