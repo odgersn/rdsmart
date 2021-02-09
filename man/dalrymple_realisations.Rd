@@ -5,7 +5,9 @@
 \alias{dalrymple_realisations}
 \title{Several realisations of the potential soil class distribution across a small
 part of the former Dalrymple Shire, Queensland, Australia.}
-\format{An object of class \code{RasterStack} of dimension 235 x 234 x 10.}
+\format{
+An object of class \code{RasterStack} of dimension 235 x 234 x 10.
+}
 \usage{
 dalrymple_realisations
 }

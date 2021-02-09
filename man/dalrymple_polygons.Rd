@@ -5,7 +5,9 @@
 \alias{dalrymple_polygons}
 \title{A small part of the Land Resources of the Dalrymple Shire soil map from
 Queensland, Australia.}
-\format{An object of class \code{SpatialPolygonsDataFrame} with 11 rows and 12 columns.}
+\format{
+An object of class \code{SpatialPolygonsDataFrame} with 11 rows and 12 columns.
+}
 \usage{
 dalrymple_polygons
 }

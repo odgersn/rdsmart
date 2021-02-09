@@ -5,7 +5,9 @@
 \alias{dalrymple_observations}
 \title{Location and soil class of some soil profiles observed across a small part of
 the former Dalrymple Shire, Queensland, Australia.}
-\format{An object of class \code{data.frame} with 2 rows and 3 columns.}
+\format{
+An object of class \code{data.frame} with 2 rows and 3 columns.
+}
 \usage{
 dalrymple_observations
 }

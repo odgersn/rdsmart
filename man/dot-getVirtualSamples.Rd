@@ -4,9 +4,16 @@
 \alias{.getVirtualSamples}
 \title{Sample the polygons of a SpatialPolygonsDataFrame.}
 \usage{
-.getVirtualSamples(covariates, polygons, composition,
-  n.realisations = 100, rate = 15, method.sample = "by_polygon",
-  method.allocate = "weighted", cpus = 1)
+.getVirtualSamples(
+  covariates,
+  polygons,
+  composition,
+  n.realisations = 100,
+  rate = 15,
+  method.sample = "by_polygon",
+  method.allocate = "weighted",
+  cpus = 1
+)
 }
 \arguments{
 \item{covariates}{A \code{RasterStack} of \emph{scorpan} environmental 

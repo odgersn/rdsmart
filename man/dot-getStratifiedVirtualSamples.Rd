@@ -4,9 +4,16 @@
 \alias{.getStratifiedVirtualSamples}
 \title{Sample the polygons of a SpatialPolygonsDataFrame.}
 \usage{
-.getStratifiedVirtualSamples(covariates, polygons, composition, strata,
-  n.realisations = 100, rate = 15, method.sample = "by_polygon",
-  method.allocate = "weighted")
+.getStratifiedVirtualSamples(
+  covariates,
+  polygons,
+  composition,
+  strata,
+  n.realisations = 100,
+  rate = 15,
+  method.sample = "by_polygon",
+  method.allocate = "weighted"
+)
 }
 \description{
 Sample the polygons of a SpatialPolygonsDataFrame.

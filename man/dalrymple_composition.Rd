@@ -5,11 +5,13 @@
 \alias{dalrymple_composition}
 \title{Composition of soil map units across a small part of the Land Resources of 
 the Dalrymple Shire map.}
-\format{A data frame with 43 rows and 4 variables: \describe{ 
+\format{
+A data frame with 43 rows and 4 variables: \describe{ 
   \item{poly}{polygon id, integer} \item{mapunit}{code of the soil map unit
   that the polygon belongs to, character string} \item{soil_class}{code of
   the soil class, character string} \item{proportion}{proportion of the soil
-  map unit that the soil class is assumed to occupy, percent} }}
+  map unit that the soil class is assumed to occupy, percent} }
+}
 \usage{
 dalrymple_composition
 }

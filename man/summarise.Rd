@@ -4,9 +4,16 @@
 \alias{summarise}
 \title{Summarise the results of a DSMART spatial disaggregation.}
 \usage{
-summarise(realisations, lookup,
-  n.realisations = raster::nlayers(realisations), nprob = 3,
-  cpus = 1, outputdir = getwd(), stub = NULL, type = "raw")
+summarise(
+  realisations,
+  lookup,
+  n.realisations = raster::nlayers(realisations),
+  nprob = 3,
+  cpus = 1,
+  outputdir = getwd(),
+  stub = NULL,
+  type = "raw"
+)
 }
 \arguments{
 \item{realisations}{A \code{RasterStack} where each layer contains one 
@@ -74,7 +81,7 @@ summarise(dalrymple_realisations, dalrymple_lookup, nprob = 5, cpus = 6)
 \references{
 McBratney, A.B., Mendonca Santos, M. de L., Minasny, B., 2003. On
   digital soil mapping. Geoderma 117, 3--52. doi: 
-  \href{http://dx.doi.org/10.1016/S0016-7061(03)00223-4}{10.1016/S0016-7061(03)00223-4}
+  \href{https://doi.org/10.1016/S0016-7061(03)00223-4}{10.1016/S0016-7061(03)00223-4}
   
   Odgers, N.P., McBratney, A.B., Minasny, B., Sun, W., Clifford, D., 2014. 
   DSMART: An algorithm to spatially disaggregate soil map units, \emph{in:} 
@@ -85,5 +92,5 @@ McBratney, A.B., Mendonca Santos, M. de L., Minasny, B., 2003. On
   Odgers, N.P., Sun, W., McBratney, A.B., Minasny, B., Clifford, D., 2014. 
   Disaggregating and harmonising soil map units through resampled 
   classification trees. Geoderma 214, 91--100. doi: 
-  \href{http://dx.doi.org/10.1016/j.geoderma.2013.09.024}{10.1016/j.geoderma.2013.09.024}
+  \href{https://doi.org/10.1016/j.geoderma.2013.09.024}{10.1016/j.geoderma.2013.09.024}
 }

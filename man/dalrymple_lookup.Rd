@@ -5,7 +5,9 @@
 \alias{dalrymple_lookup}
 \title{Lookup table that relates soil class codes in the soil map unit composition
 to integer codes in the soil class realisation rasters.}
-\format{An object of class \code{data.frame} with 71 rows and 2 columns.}
+\format{
+An object of class \code{data.frame} with 71 rows and 2 columns.
+}
 \usage{
 dalrymple_lookup
 }

@@ -52,17 +52,17 @@
   doParallel::registerDoParallel(cl)
   
   samples <- foreach::foreach(poly.id = polygons@data[, 1],
-                               .packages = c('raster', 'sp'),
+                              .packages = c('raster', 'sp'),
                               .export = ".allocate") %dopar% #It was necessary to export the .allocate function when testing on my own PC, but it may have to be deleted later.
-  {
-    # Get samples for a polygon
-    poly.samples <- .sampler(covariates, polygons, composition,
-                             poly.id, n.realisations, rate,
-                             method.sample = method.sample, 
-                             method.allocate = method.allocate)
-    
-    return(poly.samples)
-  }
+    {
+      # Get samples for a polygon
+      poly.samples <- .sampler(covariates, polygons, composition,
+                               poly.id, n.realisations, rate,
+                               method.sample = method.sample, 
+                               method.allocate = method.allocate)
+      
+      return(poly.samples)
+    }
   
   parallel::stopCluster(cl)
   foreach::registerDoSEQ()
@@ -124,8 +124,8 @@
   #   dplyr::mutate(cell = cells) %>% 
   #   dplyr::select(cell, dplyr::everything(), -ID)
   
-    # as.data.frame(raster::extract(covariates, poly, 
-    #                                           cellnumbers = TRUE))
+  # as.data.frame(raster::extract(covariates, poly, 
+  #                                           cellnumbers = TRUE))
   
   # poly.cells <- poly.cells[which(complete.cases(poly.cells)), ]
   
@@ -185,9 +185,9 @@
 #'
 #'
 .getStratifiedVirtualSamples <- function(covariates, polygons, composition, strata,
-                                     n.realisations = 100, rate = 15,
-                                     method.sample = "by_polygon", 
-                                     method.allocate = "weighted")
+                                         n.realisations = 100, rate = 15,
+                                         method.sample = "by_polygon", 
+                                         method.allocate = "weighted")
 {
   # Make sure composition column names are formatted properly
   if(ncol(composition) == 4) {
@@ -262,24 +262,24 @@
         # Weighted-random allocation within stratum
         if(!(ncol(composition) == 5)) {
           
-        stop("Weighted-random allocation specified but no stratum weights available.")
+          stop("Weighted-random allocation specified but no stratum weights available.")
           
         } else {
-        # Class weights (proportions)
-        stratum.weights <- composition[which((composition$poly == poly.id) &
-                                               (composition$stratum == stratum)), 5]
+          # Class weights (proportions)
+          stratum.weights <- composition[which((composition$poly == poly.id) &
+                                                 (composition$stratum == stratum)), 5]
           
-        # Perform allocation
-        alloc <- .allocate(stratum.classes, n = stratum.n, method = "weighted",
-                           weights = stratum.weights)
+          # Perform allocation
+          alloc <- .allocate(stratum.classes, n = stratum.n, method = "weighted",
+                             weights = stratum.weights)
           
-        soil_class <- append(soil_class, alloc)
+          soil_class <- append(soil_class, alloc)
           
         } 
       } else if(method.allocate == "random") {
-          
+        
         # Completely random allocation within stratum
-          
+        
         # Perform allocation
         alloc <- .allocate(stratum.classes, n = stratum.n, method = "random")
         soil_class <- append(soil_class, alloc)
@@ -348,7 +348,7 @@
       
     }
   }
-
+  
   ### This is useful functionality but is too slow  
   # if(base::all(base::is.na(classes)) == TRUE) {
   #   
@@ -496,8 +496,8 @@ order_stack_values <- function(r, cpus, n = nlayers(r)) {
   
   # Tuning parameter to optimise block size
   tuning <- .blocks_per_node(raster::nrow(r),
-                        raster::ncol(r),
-                        cpus = cpus)
+                             raster::ncol(r),
+                             cpus = cpus)
   
   # Start parallel cluster
   raster::beginCluster(cpus)
@@ -563,7 +563,19 @@ sort_stack_values <- function(r, cpus, n = nlayers(r), decreasing = TRUE) {
 }
 
 #' Compute confusion index
-#' 
+#'
+#' The confusion index is an estimate of the prediction uncertainty.
+#'
+#' The confusion index is computed as follows:
+#'
+#' \deqn{C = 1-(P_1-P_2); P_1\geqslant{P_2}}
+#'
+#' where \eqn{P_1} is the probability of the most probable class and \eqn{P_2}
+#' is the probability of the second most probable class (after Burrough \emph{et
+#' al.}, 1997; Odgers \emph{et al.}, 2014). The maximum confusion is 1, which
+#' occurs when \eqn{P_1=P_2}. The minimum confusion is 0, which occurs when
+#' \eqn{P_1=1} and \eqn{P_2=0} (and therefore all other \eqn{P_i=0} too).
+#'
 #' This function computes the confusion index. It first sorts the probabilities
 #' for each grid cell in descending order using \code{\link{sort_stack_values}}.
 #'
@@ -572,10 +584,25 @@ sort_stack_values <- function(r, cpus, n = nlayers(r), decreasing = TRUE) {
 #' @param cpus An integer that identifies the number of CPU nodes for parallel
 #'   processing.
 #'
-#' @return A \code{RasterLayer} containing the confusion index data. 
-#' @export
+#' @return A \code{RasterLayer} containing the confusion index data.
 #'
+#' @references Burrough, P.A., van Gaans, P.F.M., Hootsmans, R., 1997.
+#'   Continuous classification in soil survey: spatial correlation, confusion
+#'   and boundaries. Geoderma. 77, 115--135. doi:
+#'   \href{https://doi.org/10.1016/S0016-7061(97)00018-9}{10.1016/S0016-7061(97)00018-9}
+#'   
+
+#' Odgers, N.P., Sun, W., McBratney, A.B., Minasny, B., Clifford,
+#' D., 2014. Disaggregating and harmonising soil map units through resampled
+#' classification trees. Geoderma 214, 91--100. doi:
+#' \href{https://doi.org/10.1016/j.geoderma.2013.09.024}{10.1016/j.geoderma.2013.09.024}
+#'
+#' @family uncertainty functions
+#'
+#' @export
+#' 
 confusion_index <- function(r, cpus) {
+  
   # Tuning parameter to optimise block size
   tuning <- .blocks_per_node(raster::nrow(r),
                              raster::ncol(r),
@@ -603,4 +630,66 @@ confusion_index <- function(r, cpus) {
   return(output)
 }
 
-
+#' Compute Shannon's entropy
+#'
+#' Shannon's entropy is an estimate of the prediction uncertainty.
+#'
+#' Shannon's entropy is computed as follows:
+#'
+#' \deqn{H=-\sum_{i=1}^{n_\text{orders}}{P_i\log_{n_\text{orders}}P_i}}
+#'
+#' where \eqn{P_i} is the probability of occurrence of soil class \eqn{i}. The
+#' logarithm with base \eqn{n_\text{orders}} is used so that the maximum entropy
+#' is 1, which occurs when all soil classes have equal probability of occurrence
+#' (Kempen \emph{et al.}, 2009). The minimum entropy is 0, which occurs when one
+#' soil order has a probability of 1 and all others zero (minimum uncertainty).
+#'
+#' @param r A RasterStack of probabilities, where each layer corresponds to a
+#'   different soil class.
+#' @param cpus An integer that identifies the number of CPU nodes for parallel
+#'   processing.
+#'
+#' @return A \code{RasterLayer} containing the Shannon entropy values.
+#'
+#' @references Kempen, B., Brus, D.J., Heuvelink, G.B.M., Stoorvogel, J.J.,
+#'   2009. Updating the 1:50,000 Dutch soil map using legacy soil data: a
+#'   multinomial logistic regression approach. Geoderma. 151, 311--326. doi:
+#'   \href{https://doi.org/10.1016/j.geoderma.2009.04.023}{10.1016/j.geoderma.2009.04.023}
+#'
+#' @family uncertainty functions
+#'
+#' @export
+#' 
+shannon_entropy <- function(r, cpus) {
+  
+  # Tuning parameter to optimise block size
+  tuning <- .blocks_per_node(raster::nrow(r),
+                             raster::ncol(r),
+                             cpus = cpus)
+  
+  # Function to compute Shannon entropy
+  shan <- function(x){
+    
+    b <- length(x)
+    output <- {x * log(x, base = b)} %>% sum(na.rm = TRUE) %>% multiply_by(-1.0)
+    
+    return(output)
+  }
+  
+  # Start parallel cluster
+  raster::beginCluster(cpus)
+  
+  output <- raster::clusterR(r,
+                             calc,
+                             args = list(fun = shan),
+                             filename = tempfile(fileext = ".tif"),
+                             format = "GTiff", 
+                             overwrite = TRUE,
+                             NAflag = -9999.0,
+                             datatype = "FLT4S",
+                             m = tuning)
+  
+  raster::endCluster()
+  
+  return(output)
+}

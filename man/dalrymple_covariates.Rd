@@ -5,7 +5,9 @@
 \alias{dalrymple_covariates}
 \title{\emph{scorpan} environmental covariates for a small part of the former
 Dalrymple Shire, Queensland, Australia.}
-\format{An object of class \code{RasterStack} of dimension 235 x 234 x 20.}
+\format{
+An object of class \code{RasterStack} of dimension 235 x 234 x 20.
+}
 \usage{
 dalrymple_covariates
 }

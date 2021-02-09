@@ -46,7 +46,7 @@
 #'   
 #' @references McBratney, A.B., Mendonca Santos, M. de L., Minasny, B., 2003. On
 #'   digital soil mapping. Geoderma 117, 3--52. doi: 
-#'   \href{http://dx.doi.org/10.1016/S0016-7061(03)00223-4}{10.1016/S0016-7061(03)00223-4}
+#'   \href{https://doi.org/10.1016/S0016-7061(03)00223-4}{10.1016/S0016-7061(03)00223-4}
 #'   
 #'   Odgers, N.P., McBratney, A.B., Minasny, B., Sun, W., Clifford, D., 2014. 
 #'   DSMART: An algorithm to spatially disaggregate soil map units, \emph{in:} 
@@ -57,7 +57,7 @@
 #'   Odgers, N.P., Sun, W., McBratney, A.B., Minasny, B., Clifford, D., 2014. 
 #'   Disaggregating and harmonising soil map units through resampled 
 #'   classification trees. Geoderma 214, 91--100. doi: 
-#'   \href{http://dx.doi.org/10.1016/j.geoderma.2013.09.024}{10.1016/j.geoderma.2013.09.024}
+#'   \href{https://doi.org/10.1016/j.geoderma.2013.09.024}{10.1016/j.geoderma.2013.09.024}
 #'   
 #' @examples
 #' # Load datasets
@@ -218,32 +218,15 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
   
   # Compute the class indices of the n-most-probable soil classes
   # assign("nprob", nprob, envir = .GlobalEnv)
-  # raster::beginCluster(cpus)
   if(type != "prob")
   {
     # If raw class predictions are used, use "counts" for indicing.
-    # ordered.indices = raster::clusterR(counts, calc, 
-    #                                    args = list(fun = function(x) {
-    #                                      if (is.na(sum(x))) {
-    #                                        rep(NA, nprob)
-    #                                      } else { 
-    #                                        order(x, decreasing = TRUE, na.last = TRUE)[1:nprob] 
-    #                                      }}))
     ordered.indices <- order_stack_values(counts, cpus, n = nprob)
     
   }else{
     # If probabilistic predictions are used, use "probs" for indicing.
-    # ordered.indices = raster::clusterR(probs, calc, 
-    #                                    args = list(fun = function(x) {
-    #                                      if (is.na(sum(x))) {
-    #                                        rep(NA, nprob)
-    #                                      } else { 
-    #                                        order(x, decreasing = TRUE, na.last = TRUE)[1:nprob] 
-    #                                      }}))
     ordered.indices <- order_stack_values(probs, cpus, n = nprob)
   }
-  
-  # raster::endCluster()
   
   # Compute the class probabilities of the n-most-probable soil classes
   raster::beginCluster(cpus)
@@ -278,38 +261,11 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
                         format = "GTiff", overwrite = TRUE)
   }
 
-  # Start a parallel cluster
-  raster::beginCluster(cpus)
-  
-  # Compute the confusion index on the class probabilities
-  confusion <- raster::clusterR(ordered.probs,
-                                fun = function(x) { 
-                                  (1 - (x[[1]] - x[[2]]))
-                                  },
-                                filename = file.path(outputdir, "output", "mostprobable",
-                                                     paste0(stub, "confusion.tif")),
-                                format = "GTiff", 
-                                overwrite = TRUE,
-                                NAflag = -9999.0)
+  # Compute the confusion index
+  confusion <- confusion_index(ordered.probs, cpus)
   
   # Compute Shannon's entropy on the class probabilities
-  # See rationale in section 2.5 of Kempen et al. (2009) "Updating the 1:50,000
-  # Dutch soil map"
-  shannon <- raster::clusterR(ordered.probs,
-                              fun = function(x) {
-                                x %>%
-                                  magrittr::multiply_by(log(x, base = length(x))) %>%
-                                  sum(na.rm = TRUE) %>% 
-                                  magrittr::multiply_by(-1)
-                                },
-                              filename = file.path(outputdir, "output", "mostprobable",
-                                                   paste0(stub, "shannon.tif")),
-                              format = "GTiff",
-                              overwrite = TRUE, 
-                              NAflag = -9999.0)
-  
-  # Close the parallel cluster
-  raster::endCluster()
+  shannon <- shannon_entropy(ordered.probs, cpus)
   
   # Save finish time
   output$timing$finish <- base::date()
