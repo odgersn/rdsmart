@@ -146,25 +146,25 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
                          method.allocate = "weighted",
                          method.model = NULL, args.model = NULL,
                          strata = NULL,
-                         outputdir = getwd(), stub = NULL, cpus = 1,
-                         factors = NULL, type = "raw", predict = TRUE)
+                         outputdir = getwd(), stub = NULL, 
+                         factors = NULL, type = "response", predict = TRUE)
 {
   # Create list to store output
   output <- base::list()
   
   # Save start time
-  output$timing <- base::list(start = base::date())
+  output$timing <- base::list(start = Sys.time())
   
   # Check arguments before proceeding
   messages <- c("Attention is required with the following arguments:\n")
-  if(!(class(covariates) == "RasterStack"))
+  if(!(class(covariates) == "SpatRaster"))
   {
-    messages <- append(messages, "'covariates': Not a valid RasterStack.\n")
+    messages <- append(messages, "'covariates': Not a valid SpatRaster\n")
   }
-  if(!(class(polygons) == "SpatialPolygonsDataFrame"))
+  if(!(class(polygons) == "SpatVector"))
   {
     messages <- append(messages, 
-                       "'polygons': Not a valid SpatialPolygonsDataFrame.\n")
+                       "'polygons': Not a valid SpatVector\n")
   }
   if(!(class(composition) == "data.frame"))
   {
@@ -177,10 +177,6 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
   if(reals <= 0)
   {
     messages <- append(messages, "'reals': Value be greater than 0.\n")
-  }
-  if(cpus <= 0)
-  {
-    messages <- append(messages, "cpus must be greater than 0.\n")
   }
   if(!(is.null(observations)))
   {
@@ -195,26 +191,60 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
   }
   if(!(is.null(strata)))
   {
-    if(!(class(strata) == "RasterLayer"))
+    if(!(class(strata) == "SpatRaster"))
     {
-      messages <- append(messages, "'strata': Not a valid RasterLayer.\n")
+      messages <- append(messages, "'strata': Not a valid SpatRaster\n")
     }
   }
+  # If method.model is a character value, enforce proper learner detection
+  valid_learners <- mlr3extralearners::list_mlr3learners(filter = list(
+    class = "classif", predict_types = type,
+    properties = "multiclass"), select = c("name", "id", "required_packages"))
+  
   if(!(is.null(method.model)))
   {
     if(!(is.character(method.model) & length(method.model) == 1))
     {
       messages <- append(messages, "'method.model' must be NULL or a single character value.\n")
+    } else {
+      filt_learner <- valid_learners[name == method.model]
+      if(!nrow(filt_learner)) 
+      {
+        filt_learner <- valid_learners[id == method.model]
+      } else {
+        method.model <- paste0("classif.", method.model)
+        filt_learner <- valid_learners[id == method.model]
+      }
+      if(!nrow(filt_learner)) 
+      {
+        messages <- append(messages, "Chosen 'method.model' cannot create a valid learner.\n")
+      }
+    }
+  } else {
+    method.model <- "classif.C50"
+  }
+  
+  # Check that required package is installed and loaded for use
+  pkgs <- unlist(valid_learners[id == method.model]$required_packages)
+  pkg_require <- pkgs[!(pkgs %in% installed.packages()[, "Package"])]
+  if(length(pkg_require)) mlr3extralearners::install_learners(method.model)
+  invisible(sapply(pkgs, require, character.only = TRUE))
+  
+  # Check that args.model will work as expected
+  model <- lrn(method.model, predict_type = type)
+  if(!is.null(args.model)) 
+  {
+    if(inherits(args.model, "list")) 
+    {
+      model$param_set$values <- args.model
+    } else {
+      messages <- append("'args.model' does not inherit a list format")
     }
   }
+  
   if(length(messages) > 1)
   {
     stop(messages)
-  }
-  
-  # If method.model is a character value, load the caret package
-  if(is.character(method.model) & length(method.model) == 1){
-  require(caret)
   }
   
   # Set stub to "" if NULL
@@ -240,7 +270,7 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
                                   method.allocate = method.allocate,
                                   method.model = method.model, 
                                   args.model = args.model, stub = stub,
-                                  cpus = cpus, factors = factors, type = type)
+                                  factors = factors, type = type)
   
   # Create subdirectories to store results in
   outputdir <- file.path(outputdir)
@@ -260,14 +290,10 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
     names(composition) <- c("poly", "mapunit", "soil_class", "proportion")
   }
   
-  # Since we only really need the first column of the polygons SpatialPolygonsDataFrame,
+  # Since we only really need the first column of the SpatVect polygons,
   # drop all its other attributes and rename the first column to "poly"
-  polygons <-
-    polygons %>%                                        # With polygons:
-    sf::st_as_sf() %>%                                  # Cast to an sf data frame
-    dplyr::select(1, geometry) %>%                      # Select just the id column and the geometry
-    magrittr::set_colnames(c("poly", "geometry")) %>%   # Rename columns
-    as("Spatial")                                       # Cast back to a SpatialPolygonsDataFrame
+  polygons <- polygons[, 1] %>%     # Extract first column
+    stats::setNames("poly")         # Rename column to "poly"
 
   # Make sure that there are no missing values in map unit composition
   polys_to_remove <-
@@ -282,12 +308,7 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
   # SpatialPolygonsDataFrame and the composition data frame
   if(length(polys_to_remove) > 0) {
     
-    polygons <-
-      polygons %>%                                      # With polygons:
-      sf::st_as_sf() %>%                                # Cast to an sf data frame
-      dplyr::filter(!(poly %in% polys_to_remove)) %>%   # Filter out the polygons whose ids are in polys_to_remove
-      sf::st_sf() %>%                                   # Shouldn't have to do this step
-      as("Spatial")                                     # Cast back to a SpatialPolygonsDataFrame
+    polygons <- polygons[!polygons$poly %in% polys_to_remove]
 
     composition <-
       composition %>%                                   # With composition:
@@ -314,8 +335,7 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
     samples <- .getVirtualSamples(covariates, polygons, composition,
                                   n.realisations = reals, rate = rate,
                                   method.sample = method.sample,
-                                  method.allocate = method.allocate,
-                                  cpus = cpus)
+                                  method.allocate = method.allocate)
   } else {
     samples <- .getStratifiedVirtualSamples(covariates, polygons, composition,
                                             strata, n.realisations = reals,
@@ -365,19 +385,12 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
   levs <- sort(levs)
   
   # Generate lookup table
-  lookup = as.data.frame(levs)
-  lookup$code = seq(from=1, to=nrow(lookup), by=1)
-  colnames(lookup) = c("name", "code")
+  lookup <- data.frame(name = levs, code = 1:length(levs), stringsAsFactors = FALSE)
   
   # Write lookup table to file
   write.table(lookup, file.path(outputdir, "output", paste0(stub, "lookup.txt")),
               sep = ",", quote = FALSE, col.names = TRUE, row.names = FALSE)
   output$locations$lookup <- file.path(outputdir, "output", paste0(stub, "lookup.txt"))
-  
-  # Compute tuning parameter for raster::clusterR
-  tuning <- .blocks_per_node(raster::nrow(covariates),
-                             raster::ncol(covariates),
-                             cpus = cpus)
   
   # Process realisations
   for (j in 1:reals)
@@ -408,15 +421,14 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
     soil_class <- factor(soil_class, levels = levs)
 
     # Convert designated covariates to factors.
+    #### NOTE: mutate_at is deprecated, using mutate(across) for longevity
     # if(is.character(factors)){
     #   fcols <- c(1:ncol(s))[colnames(s) %in% factors]
     #   for(i in 1:length(fcols)){
     #     s[,fcols[i]]<-as.factor(s[,fcols[i]])
     #   }}
-    if(is.list(factors)) {
-      for(f in names(factors)){
-        s %<>% dplyr::mutate_at(f, factor, levels = factors[[f]])
-      }
+    if(!is.null(factors)) {
+      s <- s %>% dplyr::mutate(across(factors, as.factor))
     }
     
     # Test if there are levels in soil_class with 0 cases
@@ -424,138 +436,97 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
     zeroes <- sum(table(soil_class) == 0) > 0
     
     # If there are levels with 0 cases, make a reclassification table for the prediction raster.
-    rclt<-cbind(c(1:sum(table(soil_class) != 0))
-                , c(1:length(table(soil_class)))[table(soil_class) != 0]
+    rclt <- cbind(c(1:sum(table(soil_class) != 0)), 
+                  c(1:length(table(soil_class)))[table(soil_class) != 0]
     )
 
+    # Create mlr3 task from data
+    task <- TaskClassif$new(id = "data", backend = cbind(soil_class = soil_class, s), 
+                            target = "soil_class")$droplevels()
+    
     # Fit model
-    if(is.null(method.model)){
-      model = C50::C5.0(s, y = soil_class)
-    }else{
-      # The train function does not accept factors in which there are levels which have 0 cases.
-      # These levels must therefore be dropped.
-      soil_class <- base::droplevels(soil_class)
-      model = base::do.call(caret::train,
-                            c(list(x = s,
-                                   y = soil_class,
-                                   method = method.model),
-                              args.model))
-    }
+    model <- model$train(task)
+    model_out <- model$model
     
     # Save model to text file
-    if(is.null(method.model)){
-      out <- utils::capture.output(summary(model))
-    }else{
-      out <- utils::capture.output(model$finalModel)
-    }
+    out <- utils::capture.output(model_out)
     cat(out, file = paste0(outputdir, "/output/models/", stub, "model_",
                            formatC(j, width = nchar(reals), format = "d",
                                    flag = "0"), ".txt"),
         sep = "\n", append = TRUE)
     
     # Save model to rdata file
-    save(model, 
+    save(model_out, 
          file = file.path(outputdir, "output", "models", 
                           paste0(stub, "model_",
                                  formatC(j, width = nchar(reals), format = "d", flag = "0"),
                                  ".RData")))
     
     
-    
-    if(predict){
+    # Model prediction
+    if(predict) {
+      # Create predictive function to work with mlr3 learner models for either
+      # probability or classification modelling
+      pf <- function(model, ...) {
+        if(model$predict_type == "prob") {
+          p <- model$predict_newdata(...)$data$prob
+          if(length(levs) != ncol(p)) {
+            missing <- setdiff(levs, colnames(p))
+            pm <- matrix(0, ncol = length(missing), nrow = nrow(p), dimnames = list(NULL, missing))
+            p <- cbind(p, pm)
+            p <- p[, levs]
+          }
+          p
+        } else {
+          model$predict_newdata(...)$data$response
+        }
+      }
+      
       if(type != "prob")
       {
         # If raw class predictions are specified (default), predict realisation and save it to 
         # raster.
-        raster::beginCluster(cpus)
-        r1 <- raster::clusterR(covariates, 
-                               raster::predict,
-                               args = list(model = model, factors = factors,
-                                           inf.rm = TRUE),
-                               m = tuning,
+        
+        # terra crashes if a file is being overwritten while open in this R session
+        # so perform zeroes decision first
+        if(zeroes) 
+        {
+          # If levels were dropped from soil_class in order to use the train function,
+          # the prediction raster must be reclassified in order to ensure that the integer
+          # values represent the same soil types across the realizations.
+          r1 <- terra::predict(covariates, model, na.rm = TRUE, fun = pf,
+                               wopt = list(datatype = "INT2S", todisk = TRUE))
+          
+          r1 <- terra::classify(r1, rclt, 
+                                filename = file.path(outputdir, "output", "realisations",
+                                                     paste0(stub, "realisation_", 
+                                                            formatC(j, width = nchar(reals), format = "d", flag = "0"),
+                                                            ".tif")),
+                                overwrite = TRUE, wopt = list(datatype = "INT2S"))
+        } else {
+          r1 <- terra::predict(covariates, model, na.rm = TRUE, fun = pf,
                                filename = file.path(outputdir, "output", "realisations",
                                                     paste0(stub, "realisation_", 
                                                            formatC(j, width = nchar(reals), format = "d", flag = "0"),
                                                            ".tif")),
-                               format = "GTiff", overwrite = TRUE, datatype = "INT2S")
-        
-        # If levels were dropped from soil_class in order to use the train function,
-        # the prediction raster must be reclassified in order to ensure that the integer
-        # values represent the same soil types across the realizations.
-        if(zeroes == TRUE & is.null(method.model) == FALSE)
-        {
-          r1 <- raster::clusterR(r1, reclassify, args = list(rcl = rclt),
-                                 m = tuning,
-                                 filename = file.path(outputdir, "output", "realisations",
-                                                      paste0(stub, "realisation_", 
-                                                             formatC(j, width = nchar(reals), format = "d", flag = "0"),
-                                                             ".tif")),
-                                 format = "GTiff", overwrite = TRUE, datatype = "INT2S")
+                               overwrite = TRUE, wopt = list(datatype = "INT2S"))
         }
-        raster::endCluster()
-        
       } else {
-        # If probabilistic predictions are specified, produce a raster brick with the
-        # probabilities of each soil class.
-        if(zeroes == FALSE | is.null(method.model)){
-          # If no levels were dropped from soil_class in order to use the train function,
-          # the rasterbrick can be used as it is.
-          raster::beginCluster(cpus)
-          r1 <- raster::clusterR(covariates, predict, 
-                                 args = list(model, type = "prob",
-                                             index = 1:nrow(lookup),
-                                             na.rm = TRUE,
-                                             factors = factors),
-                                 m = tuning,
-                                 filename = file.path(outputdir, "output", "realisations",
-                                                      paste0(stub, "realisation_",
-                                                             formatC(j, width = nchar(reals), format = "d", flag = "0"), ".tif")),
-                                 format = "GTiff", overwrite = TRUE, datatype = "FLT4S")
-          raster::endCluster()
-          
-        }else{
-          # If levels were dropped from soil_class in order to use the train function, rasters
-          # with probabilities for the missing levels must be inserted in the rasterbrick.
-          # First, the rasterbrick is predicted as above.
-          raster::beginCluster(cpus)
-          tmp1 <- raster::clusterR(covariates,
-                                   predict,
-                                   factors = factors,
-                                   args = list(model,
-                                               type = "prob",
-                                               index = 1:base::length(base::levels(soil_class)),
-                                               na.rm = TRUE),
-                                   m = tuning)
-          # Then, a raster with 0's is calculated (the missing levels have 0 probability for the
-          # realisation in question)
-          tmp2 <- raster::clusterR(tmp1[[1]], calc, args = list(function(x) x*0), 
-                                   m = tuning)
-          raster::endCluster()
-          # The rasters are then all arranged in a rasterstack, which is converted into the
-          # final rasterbrick.
-          rlist<-list()
-          for(i in 1:nrow(lookup))
-          {
-            if(i %in% rclt[,2])
-            {
-              rlist[[i]]<-tmp1[[which(rclt[,2] == i)]]
-            }else{
-              rlist[[i]]<-tmp2
-            }
-          }
-          rlist<-stack(rlist)
-          r1<-raster::brick(rlist, filename = file.path(outputdir, "output", "realisations",
-                                                        paste0(stub, "realisation_", formatC(j, width = nchar(reals), format = "d", flag = "0"),
-                                                               ".tif")),
-                            format = "GTiff", overwrite = TRUE, datatype = "FLT4S")
-          rm(tmp1,tmp2)
-        }
+        # If probabilistic predictions are specified, produce a multilayered 
+        # SpatRaster with the probabilities of each soil class.
+        r1 <- terra::predict(covariates, model, na.rm = TRUE, fun = pf,
+                             filename = file.path(outputdir, "output", "realisations",
+                                                  paste0(stub, "realisation_", 
+                                                         formatC(j, width = nchar(reals), format = "d", flag = "0"),
+                                                         ".tif")),
+                             overwrite = TRUE, wopt = list(names = lookup$name)
+        )
       }
     }
   }
   
   # Save finish time
-  output$timing$finish <- base::date()
+  output$timing$finish <- Sys.time()
   
   # Return output
   return(output)

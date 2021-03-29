@@ -42,179 +42,35 @@
 #' @param cpus An integer that identifies the number of CPU processors to use 
 #'   for parallel processing.
 #' 
-.getVirtualSamples <- function(covariates, polygons, composition,
-                               n.realisations = 100, rate = 15,
+.getVirtualSamples <- function(covariates, polygons, composition, 
+                               n.realisations = 100, rate = 15, 
                                method.sample = "by_polygon", 
-                               method.allocate = "weighted", cpus = 1)
+                               method.allocate = "weighted") 
 {
-  # Initialise cluster
-  cl <- parallel::makeCluster(cpus)
-  doParallel::registerDoParallel(cl)
   
-  samples <- foreach::foreach(poly.id = polygons@data[, 1],
-                              .packages = c('raster', 'sp'),
-                              .export = ".allocate") %dopar% #It was necessary to export the .allocate function when testing on my own PC, but it may have to be deleted later.
-    {
-      # Get samples for a polygon
-      poly.samples <- .sampler(covariates, polygons, composition,
-                               poly.id, n.realisations, rate,
-                               method.sample = method.sample, 
-                               method.allocate = method.allocate)
-      
-      return(poly.samples)
-    }
-  
-  parallel::stopCluster(cl)
-  foreach::registerDoSEQ()
-  
-  # Merge polygon sample data frames
-  samples <- data.table::rbindlist(samples)
-  
-  return(samples)
-}
-
-.sampler <- function(covariates, polygons, composition,
-                     poly.id, n.realisations = 100, rate = 15,
-                     method.sample = "by_polygon", 
-                     method.allocate = "weighted"){
-  # Compute a mask to sample
-  # Sum the covariates with na.rm = F so that cells with a NA value in any layer
-  # have a sum of NA. This means that we can query a single layer to find which
-  # cells have NA in the covariates, rather than the whole covariate stack,
-  # which should be a faster operation when the covariates are being read from
-  # disk.
-  #mask <- sum(covariates, na.rm = FALSE)
-  
-  # Subset a polygon
-  poly <- base::subset(polygons, polygons@data[, 1] == poly.id)
-  
-  # If sample = "area", determine the correct number of samples to take
-  n.samples <- 0
-  if(method.sample == "by_area") {
+  # Get samples for a polygon
+  samples <- dplyr::bind_rows(lapply(1:length(polygons), function(x) {
     
-    # Compute area of polygon in square kilometres
-    # FOR NOW, assumes that CRS of polygons is projected and with units of m.
-    # The area function of the raster package also gives the area in square
-    # metres for longitude/latitude coordinate systems.
-    area <- raster::area(poly) / 1e6
-    
-    if(area < 1.0)
-    {
-      area <- 1.0
-    }
-    
-    # Compute number of samples to take
-    n.samples <- rate * base::trunc(area)
-  } else if(method.sample == "by_polygon") {
-    n.samples <- rate
-  } else stop("Sampling method \"", method.sample, "\" is unknown")
-  
-  # Extract covariates of all grid cells that intersect with the polygon
-  # Retain only those cells that do not have NA in their covariates
-  poly.samples <- 
-    covariates %>% 
-    raster::extract(y = poly, cellnumbers = TRUE, df = TRUE) %>% 
-    dplyr::select(-ID) %>% 
-    dplyr::filter(complete.cases(.)) %>% 
-    dplyr::sample_n(size = (n.samples * n.realisations), replace = TRUE)
-  
-  # Extract covariates for sampled cells
-  # poly.samples <- 
-  #   raster::extract(covariates, y = cells, df = TRUE) %>% 
-  #   dplyr::mutate(cell = cells) %>% 
-  #   dplyr::select(cell, dplyr::everything(), -ID)
-  
-  # as.data.frame(raster::extract(covariates, poly, 
-  #                                           cellnumbers = TRUE))
-  
-  # poly.cells <- poly.cells[which(complete.cases(poly.cells)), ]
-  
-  # Sample grid cells with replacement for ALL realisations in one go
-  # poly.samples <- poly.cells[sample(nrow(poly.cells), replace = TRUE, size = n.samples * n.realisations), ]
-  
-  # Allocate all samples to a soil class
-  soil_class <- character()
-  if(method.allocate == "weighted") {
-    # Weighted random allocation
-    poly.classes <- base::as.character(composition[base::which(composition[, 1] == poly.id), 3])
-    poly.weights <- composition[base::which(composition[, 1] == poly.id), 4]
-    
-    if(length(poly.classes) == 0) {
-      stop(paste0("No map unit composition for polygon ", poly.id))
-    } else {
-      soil_class <- .allocate(poly.classes, n = n.samples * n.realisations, 
-                              method = "weighted", weights = poly.weights)
-    }
-  } else if(method.allocate == "random-mapunit") {
-    # Random-within_map unit allocation
-    poly.classes <- as.character(composition[which(composition[, 1] == poly.id), 3])
-    
-    if(length(poly.classes) == 0) {
-      stop(paste0("No map unit composition for polygon ", poly.id))
-    } else {
-      soil_class <- .allocate(poly.classes, n = n.samples * n.realisations, 
-                              method = "random", weights = NULL)
-    }
-  } else if(method.allocate == "random-all") {
-    # Random-within_map allocation
-    poly.classes <- as.character(unique(composition[, 3]))
-    
-    if(length(poly.classes) == 0) {
-      stop("No soil classes available to allocate to")
-    } else {
-      soil_class <- .allocate(poly.classes, n = n.samples * n.realisations, 
-                              method = "random", weights = NULL)
-    }
-  } else stop("Allocation method is unknown")
-  
-  # Add realisation id, spatial coordinates, soil class to sampled grid cells
-  xy <- as.data.frame(raster::xyFromCell(covariates, poly.samples$cell))
-  meta <- list(realisation = base::rep(1:n.realisations, times = n.samples),
-               type = base::rep("virtual", nrow(xy)),
-               sampling = base::rep(method.sample, base::nrow(xy)),
-               allocation = base::rep(method.allocate, base::nrow(xy)))
-  poly.samples <- cbind(as.data.frame(meta), xy, soil_class, 
-                        poly.samples[, 2:base::ncol(poly.samples)])
-  
-  # Add polygon samples to list
-  #samples <- append(samples, list(poly.samples))
-  return(poly.samples)
-}
-
-#'Sample the polygons of a SpatialPolygonsDataFrame.
-#'
-#'
-.getStratifiedVirtualSamples <- function(covariates, polygons, composition, strata,
-                                         n.realisations = 100, rate = 15,
-                                         method.sample = "by_polygon", 
-                                         method.allocate = "weighted")
-{
-  # Make sure composition column names are formatted properly
-  if(ncol(composition) == 4) {
-    names(composition) <- c("poly", "mapunit", "soil_class", "proportion")
-  } else if (ncol(composition) == 5) {
-    names(composition) <- c("poly", "mapunit", "stratum", "soil_class", "proportion")
-  } else stop("Map unit composition in unknown format.")
-  
-  # Empty list to hold samples
-  samples <- list()
-  
-  # Process each polygon in polygons
-  for(poly.id in polygons@data[, 1])
-  {
     # Subset a polygon
-    poly <- subset(polygons, polygons@data[, 1] == poly.id)
+    poly.id <- as.data.frame(polygons[x, 1])[, 1]
+    poly <- polygons[x, 1]
+    
+    # Shows which polygon it is sampling from, commented out to be quieter
+    # cat(paste0(
+    #   "\nGenerating samples for polygon ", 
+    #   poly.id, " [", x, "/", length(polygons), "]"))
     
     # If sample = "area", determine the correct number of samples to take
     n.samples <- 0
     if(method.sample == "by_area") {
+      
       # Compute area of polygon in square kilometres
       # FOR NOW, assumes that CRS of polygons is projected and with units of m.
       # The area function of the raster package also gives the area in square
       # metres for longitude/latitude coordinate systems.
-      area <- raster::area(poly) / 1e6
+      area <- terra::area(poly) / 1e6
       
-      if(area < 1.0)
+      if(area < 1.0) 
       {
         area <- 1.0
       }
@@ -227,26 +83,130 @@
     
     # Extract covariates of all grid cells that intersect with the polygon
     # Retain only those cells that do not have NA in their covariates
-    poly.cells <- as.data.frame(raster::extract(covariates, poly, cellnumbers = TRUE))
-    poly.cells <- poly.cells[which(complete.cases(poly.cells)), ]
+    # NOTE: using slice_sample instead of sample_n because sample_n is superceded
+    poly.samples <- terra::extract(covariates, poly, cells = TRUE) %>% 
+      dplyr::select(-ID) %>% 
+      dplyr::filter(complete.cases(.)) %>% 
+      {if(nrow(.) > 0) {
+        dplyr::slice_sample(., n = (n.samples * n.realisations), replace = TRUE)
+      } else . }
     
-    # Sample grid cells with replacement for ALL realisations in one go
-    poly.samples <- poly.cells[sample(nrow(poly.cells), replace = TRUE, size = n.samples * n.realisations), ]
+    # Allocate all samples to a soil class
+    soil_class <- character()
+    if(method.allocate == "weighted") {
+      # Weighted random allocation
+      poly.classes <- base::as.character(composition[base::which(composition[, 1] == poly.id), 3])
+      poly.weights <- composition[base::which(composition[, 1] == poly.id), 4]
+      
+      if(length(poly.classes) == 0) {
+        stop(paste0("No map unit composition for polygon ", poly.id))
+      } else {
+        soil_class <- .allocate(poly.classes, n = n.samples * n.realisations, 
+                                method = "weighted", weights = poly.weights)
+      }
+    } else if(method.allocate == "random-mapunit") {
+      # Random-within_map unit allocation
+      poly.classes <- as.character(composition[which(composition[, 1] == poly.id), 3])
+      
+      if(length(poly.classes) == 0) {
+        stop(paste0("No map unit composition for polygon ", poly.id))
+      } else {
+        soil_class <- .allocate(poly.classes, n = n.samples * n.realisations, 
+                                method = "random", weights = NULL)
+      }
+    } else if(method.allocate == "random-all") {
+      # Random-within_map allocation
+      poly.classes <- as.character(unique(composition[, 3]))
+      
+      if(length(poly.classes) == 0) {
+        stop("No soil classes available to allocate to")
+      } else {
+        soil_class <- .allocate(poly.classes, n = n.samples * n.realisations, 
+                                method = "random", weights = NULL)
+      }
+    } else stop("Allocation method is unknown")
+    
+    # Add realisation id, spatial coordinates, soil class to sampled grid cells
+    xy <- as.data.frame(terra::xyFromCell(covariates, poly.samples$cell))
+    meta <- list(realisation = base::rep(1:n.realisations, times = n.samples)[0:nrow(xy)], 
+                 type = base::rep("virtual", nrow(xy)), 
+                 sampling = base::rep(method.sample, base::nrow(xy)), 
+                 allocation = base::rep(method.allocate, base::nrow(xy)))
+    poly.samples <- cbind(as.data.frame(meta), xy, 
+                          soil_class = soil_class[0:nrow(xy)], 
+                          poly.samples[, -which(names(poly.samples) == "cell")])
+    return(poly.samples)
+    
+  }))
+  return(samples)
+}
+
+.getStratifiedVirtualSamples <- function(covariates, polygons, composition, strata, 
+                                         n.realisations = 100, rate = 15, 
+                                         method.sample = "by_polygon", 
+                                         method.allocate = "weighted") 
+{
+  # Make sure composition column names are formatted properly
+  if(ncol(composition) == 4) {
+    names(composition) <- c("poly", "mapunit", "soil_class", "proportion")
+  } else if(ncol(composition) == 5) {
+    names(composition) <- c("poly", "mapunit", "stratum", "soil_class", "proportion")
+  } else stop("Map unit composition in unknown format.")
+  
+  # Process each polygon in polygons
+  samples <- dplyr::bind_rows(lapply(1:length(polygons), function(x) {
+    
+    # Subset a polygon
+    poly <- polygons[x, 1]
+    poly.id = as.data.frame(polygons[x, 1])[, 1]
+    
+    # cat(paste0(
+    #   "\nGenerating stratified samples for polygon ", 
+    #   poly.id, " [", x, "/", length(polygons), "]"))
+    
+    # If sample = "area", determine the correct number of samples to take
+    n.samples <- 0
+    if(method.sample == "by_area") {
+      # Compute area of polygon in square kilometres
+      # FOR NOW, assumes that CRS of polygons is projected and with units of m.
+      # The area function of the raster package also gives the area in square
+      # metres for longitude/latitude coordinate systems.
+      area <- terra::area(poly) / 1e6
+      
+      if(area < 1.0) 
+      {
+        area <- 1.0
+      }
+      
+      # Compute number of samples to take
+      n.samples <- rate * base::trunc(area)
+    } else if(method.sample == "by_polygon") {
+      n.samples <- rate
+    }  else stop("Sampling method \"", method.sample, "\" is unknown")
+    
+    # Extract covariates of all grid cells that intersect with the polygon
+    # Retain only those cells that do not have NA in their covariates
+    poly.samples <- terra::extract(covariates, poly, cells = TRUE) %>% 
+      dplyr::select(-ID) %>% 
+      dplyr::filter(complete.cases(.)) %>% 
+      {if(nrow(.) > 0) {
+        dplyr::slice_sample(., n = (n.samples * n.realisations), replace = TRUE)
+      } else . }
     
     # Get coordinates of sampled grid cells
-    xy <- as.data.frame(raster::xyFromCell(covariates, poly.samples$cell))
+    xy <- as.data.frame(terra::xyFromCell(covariates, poly.samples$cell))
     
     # Determine what strata they belong to
-    poly.samples.strata <- extract(strata, xy)
+    poly.samples.strata <- terra::extract(strata, xy)
     
     # Allocate soils within strata
-    poly.samples <- cbind(poly.samples.strata, poly.samples[, 2:ncol(poly.samples)])
-    names(poly.samples)[names(poly.samples) == "poly.samples.strata"] <- "stratum"
+    poly.samples <- cbind(poly.samples.strata, 
+                          poly.samples[, -which(names(poly.samples) == "cell")])
+    names(poly.samples)[names(poly.samples) == colnames(poly.samples.strata)] <- "stratum"
     poly.samples <- poly.samples[order(poly.samples$stratum), ]
     
     soil_class <- character()
-    for(stratum in unique(poly.samples[, 1]))
-    {
+    for(stratum in unique(poly.samples[, 1])) {
       # Work out the number of samples to allocate
       stratum.n <- length(which(poly.samples[, 1] == stratum))
       
@@ -275,8 +235,9 @@
           
           soil_class <- append(soil_class, alloc)
           
-        } 
-      } else if(method.allocate == "random") {
+        }
+      }
+      else if(method.allocate == "random") {
         
         # Completely random allocation within stratum
         
@@ -293,20 +254,13 @@
     poly.samples <- poly.samples[base::sample(nrow(poly.samples)), ]
     
     # Add realisation id, spatial coordinates, soil class to sampled grid cells
-    meta <- list(realisation = rep(1:n.realisations, times = n.samples),
-                 type = base::rep("virtual", nrow(xy)),
-                 sampling = base::rep(method.sample, nrow(xy)),
+    meta <- list(realisation = rep(1:n.realisations, times = n.samples)[0:nrow(poly.samples)], 
+                 type = base::rep("virtual", nrow(xy)), 
+                 sampling = base::rep(method.sample, nrow(xy)), 
                  allocation = base::rep(method.allocate, nrow(xy)))
     poly.samples <- cbind(as.data.frame(meta), poly.samples)
-    
-    # Add polygon samples to list
-    samples <- base::append(samples, list(poly.samples))
-    
-  }
-  
-  # Merge polygon sample data frames
-  samples <- data.table::rbindlist(samples)
-  
+    return(poly.samples)
+  }))
   return(samples)
 }
 
@@ -396,21 +350,20 @@
   # Rename columns for consistency with virtual samples
   base::colnames(observations) <- c("x", "y", "soil_class")
   
-  # Identify coordinate fields of observations data frame
-  sp::coordinates(observations) <- c(1, 2)
-  
   # Extract covariates at observation locations
-  o.covariates <- raster::extract(covariates, observations)
+  o.covariates <- observations %>% 
+    cbind(terra::extract(covariates, observations[, c("x", "y")]))
   
   # Join covariates back to observations
-  meta <- list(realisation = numeric(length = nrow(observations)),
-               type = base::rep("actual", nrow(observations)),
-               sampling = base::rep("observed", nrow(observations)),
+  meta <- list(realisation = numeric(length = nrow(observations)), 
+               type = base::rep("actual", nrow(observations)), 
+               sampling = base::rep("observed", nrow(observations)), 
                allocation = base::rep("observed", nrow(observations)))
   obs <- cbind(as.data.frame(meta), as.data.frame(observations), o.covariates)
   
   # Return only those observations with no NA in the covariates
-  obs <- obs[which(complete.cases(obs)), ]
+  obs <- cbind(as.data.frame(meta), o.covariates) %>% 
+    dplyr::filter(complete.cases(.))
   return(obs)
 }
 
@@ -446,29 +399,31 @@
 #' @return
 #'
 #' @examples
-.blocks_per_node <- function(rows, cols, cpus, max_cells = 1000000) {
-  
-  # Initialise tuning variable
-  m <- NA
-  
-  if(max_cells < (rows * cols)) {
-    # Compute the number of rows per block
-    block_rows <- max_cells / cols
-    
-    # Compute the number of blocks in the whole grid
-    total_blocks <- rows / block_rows
-    
-    # Compute the number of blocks per CPU
-    m <- ceiling(total_blocks / cpus)
-    
-  } else {
-    # May revise this in the future
-    m <- 2
-  }
-  
-  # Return tuning variable
-  return(m)
-}
+
+#### THIS IS NO LONGER USEFUL UNDER terra PACKAGE
+# .blocks_per_node <- function(rows, cols, cpus, max_cells = 1000000) {
+#   
+#   # Initialise tuning variable
+#   m <- NA
+#   
+#   if(max_cells < (rows * cols)) {
+#     # Compute the number of rows per block
+#     block_rows <- max_cells / cols
+#     
+#     # Compute the number of blocks in the whole grid
+#     total_blocks <- rows / block_rows
+#     
+#     # Compute the number of blocks per CPU
+#     m <- ceiling(total_blocks / cpus)
+#     
+#   } else {
+#     # May revise this in the future
+#     m <- 2
+#   }
+#   
+#   # Return tuning variable
+#   return(m)
+# }
 
 
 #' Order raster stack values
@@ -485,35 +440,22 @@
 #' found, and so-on.
 #'
 #' @param r A \code{RasterStack} whose layers contain the values to be ordered.
-#' @param cpus
 #' @param n_prob
 #'
 #' @return A \code{RasterStack} containing the sorted data.
 #'
 #' @export
 #' 
-order_stack_values <- function(r, cpus, n = nlayers(r)) {
-  
-  # Tuning parameter to optimise block size
-  tuning <- .blocks_per_node(raster::nrow(r),
-                             raster::ncol(r),
-                             cpus = cpus)
-  
-  # Start parallel cluster
-  raster::beginCluster(cpus)
+order_stack_values <- function(r, n = nlyr(r)) {
   
   # Order the values in the layers of `r`
-  output = raster::clusterR(r, calc, 
-                            args = list(fun = function(x) {
-                              if (is.na(sum(x))) {
-                                rep(NA, n)
-                              } else { 
-                                order(x, decreasing = TRUE, na.last = TRUE)[1:n] 
-                              }}),
-                            m = tuning)
-  
-  # End parallel cluster
-  raster::endCluster()
+  output <- terra::app(r, function(x) {
+    if (is.na(sum(x))) {
+      rep(NA, n)
+    } else {
+      order_cpp(x, decreasing = TRUE)[1:n]
+    }
+  })
   
   return(output)
 }
@@ -525,8 +467,6 @@ order_stack_values <- function(r, cpus, n = nlayers(r)) {
 #' information about how ordering works.
 #'
 #' @param r A \code{RasterStack} whose layers contain the values to be sorted.
-#' @param cpus An integer that identifies the number of CPU nodes for parallel
-#'   processing.
 #' @param n An integer that identifies the number of layers in \code{r} that
 #'   should be sorted. Default is to sort all layers in \code{r}.
 #' @param decreasing A boolean that indicates whether values should be sorted in
@@ -536,28 +476,16 @@ order_stack_values <- function(r, cpus, n = nlayers(r)) {
 #'
 #' @export
 #'
-sort_stack_values <- function(r, cpus, n = nlayers(r), decreasing = TRUE) {
-  
-  # Tuning parameter to optimise block size
-  tuning <- .blocks_per_node(raster::nrow(r),
-                             raster::ncol(r),
-                             cpus = cpus)
-  
-  # Start parallel cluster
-  raster::beginCluster(cpus)
+sort_stack_values <- function(r, n = nlyr(r), decreasing = TRUE) {
   
   # Sort the values in the layers of `r`
-  output = raster::clusterR(r, calc, 
-                            args = list(fun = function(x) {
-                              if (is.na(sum(x))) {
-                                rep(NA, n)
-                              } else { 
-                                sort(x, decreasing = decreasing, na.last = TRUE)[1:n]
-                              }
-                            }
-                            ),
-                            m = tuning)
-  raster::endCluster()
+  output <- terra::app(r, function(x) {
+    if (is.na(sum(x))) {
+      rep(NA, n)
+    } else {
+      sort_cpp(x, decreasing = decreasing, nalast = TRUE)[1:n]
+    }
+  })
   
   return(output)
 }
@@ -581,8 +509,6 @@ sort_stack_values <- function(r, cpus, n = nlayers(r), decreasing = TRUE) {
 #'
 #' @param r A RasterStack of probabilities, where each layer corresponds to a
 #'   different soil class.
-#' @param cpus An integer that identifies the number of CPU nodes for parallel
-#'   processing.
 #'
 #' @return A \code{RasterLayer} containing the confusion index data.
 #'
@@ -601,31 +527,16 @@ sort_stack_values <- function(r, cpus, n = nlayers(r), decreasing = TRUE) {
 #'
 #' @export
 #' 
-confusion_index <- function(r, cpus) {
+confusion_index <- function(r, do.sort = FALSE) {
   
-  # Tuning parameter to optimise block size
-  tuning <- .blocks_per_node(raster::nrow(r),
-                             raster::ncol(r),
-                             cpus = cpus)
+  if(do.sort) {
+    r <- sort_stack_values(r, n = 2)
+  }
   
-  # Sort probability values
-  sorted <- sort_stack_values(r, cpus)
-  
-  # Start parallel cluster
-  raster::beginCluster(cpus)
-  
-  output <- raster::clusterR(sorted,
-                             fun = function(x) { 
-                               (1 - (x[[1]] - x[[2]]))
-                             },
-                             filename = tempfile(fileext = ".tif"),
-                             format = "GTiff", 
-                             overwrite = TRUE,
-                             NAflag = -9999.0,
-                             datatype = "FLT4S",
-                             m = tuning)
-  
-  raster::endCluster()
+  defops <- terra:::spatOptions()$todisk
+  terraOptions(todisk = TRUE)
+  output <- (1 - (r[[1]] - r[[2]]))
+  terraOptions(todisk = defops)
   
   return(output)
 }
@@ -646,8 +557,6 @@ confusion_index <- function(r, cpus) {
 #'
 #' @param r A RasterStack of probabilities, where each layer corresponds to a
 #'   different soil class.
-#' @param cpus An integer that identifies the number of CPU nodes for parallel
-#'   processing.
 #'
 #' @return A \code{RasterLayer} containing the Shannon entropy values.
 #'
@@ -660,36 +569,16 @@ confusion_index <- function(r, cpus) {
 #'
 #' @export
 #' 
-shannon_entropy <- function(r, cpus) {
+shannon_entropy <- function(r, nprob = 3, do.sort = FALSE) {
   
-  # Tuning parameter to optimise block size
-  tuning <- .blocks_per_node(raster::nrow(r),
-                             raster::ncol(r),
-                             cpus = cpus)
-  
-  # Function to compute Shannon entropy
-  shan <- function(x){
-    
-    b <- length(x)
-    output <- {x * log(x, base = b)} %>% sum(na.rm = TRUE) %>% multiply_by(-1.0)
-    
-    return(output)
+  if(do.sort) {
+    r <- sort_stack_values(r, n = max(2, nprob))
   }
   
-  # Start parallel cluster
-  raster::beginCluster(cpus)
-  
-  output <- raster::clusterR(r,
-                             calc,
-                             args = list(fun = shan),
-                             filename = tempfile(fileext = ".tif"),
-                             format = "GTiff", 
-                             overwrite = TRUE,
-                             NAflag = -9999.0,
-                             datatype = "FLT4S",
-                             m = tuning)
-  
-  raster::endCluster()
+  defops <- terra:::spatOptions()$todisk
+  terraOptions(todisk = TRUE)
+  output <- -sum(r * (log(r, base = nlyr(r))), na.rm = TRUE)
+  terraOptions(todisk = defops)
   
   return(output)
 }

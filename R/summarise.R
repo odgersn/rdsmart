@@ -30,8 +30,6 @@
 #'   \code{nprob} is an integer that identifies the number of probability ranks 
 #'   to map. For example, if \code{n = 3}, DSMART will map the first-, second- 
 #'   and third-most-probable soil classes and their probabilities of occurrence.
-#' @param cpus An integer that identifies the number of CPU processors to use 
-#'   for parallel processing.
 #' @param outputdir A character string that identifies the location of the main 
 #'   output directory. The folder \code{output} and its subfolders will be 
 #'   placed here. Default is the current working directory, \code{getwd()}.
@@ -69,29 +67,35 @@
 #' 
 #' @export
 
-summarise <- function(realisations, lookup, n.realisations = raster::nlayers(realisations),
-                      nprob = 3, cpus = 1, outputdir = getwd(), stub = NULL, type = "raw")
+summarise <- function(realisations, lookup, 
+                      n.realisations = ifelse(is.list(realisations), length(realisations), 
+                                              terra::nlyr(realisations)),
+                      nprob = 3, outputdir = getwd(), stub = NULL, type = "response")
 {
+  # TO DELETE ONCE PACKAGE IS WRITTEN:
+  # Rcpp::sourceCpp("./src/order.cpp")
+  # Rcpp::sourceCpp("./src/sort.cpp")
+  
   # Create list to store output
   output <- base::list()
   
   # Save start time
-  output$timing <- base::list(start = base::date())
+  output$timing <- base::list(start = Sys.time())
   
   # Check arguments before proceeding
   messages <- c("Attention is required with the following arguments:\n")
   if(type != "prob")
   {
-    if(!(class(realisations) == "RasterStack"))
+    if(!(class(realisations) == "SpatRaster"))
     {
-      messages <- append(messages, "'realisations': Not a valid RasterStack.\n")
+      messages <- append(messages, "'realisations': Not a valid SpatRaster\n")
     }
   }else{
-    if(is.list(realisations) == FALSE){
-      messages <- append(messages, "'realisations' must be a list of RasterBrick objects when probabilistic predictions are used.'.\n")
+    if(is.list(realisations) == FALSE) {
+      messages <- append(messages, "'realisations' must be a list of SpatRaster objects when probabilistic predictions are used.'.\n")
     }else{
-      if(sum(unlist(lapply(realisations, function(x) class(x) != "RasterBrick"))) > 0){
-        messages <- append(messages, "'realisations' must be a list of RasterBrick objects when probabilistic predictions are used.'.\n")
+      if(sum(unlist(lapply(realisations, function(x) class(x) != "SpatRaster"))) > 0) {
+        messages <- append(messages, "'realisations' must be a list of SpatRaster objects when probabilistic predictions are used.'.\n")
       }
     }
   }
@@ -107,10 +111,6 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
   if(nprob <= 0)
   {
     messages <- append(messages, "'nprob': Value must be greater than 0.\n")
-  }
-  if(cpus <= 0)
-  {
-    messages <- append(messages, "'cpus': Value must be greater than 0.\n")
   }
   if(!(file.exists(outputdir)))
   {
@@ -140,7 +140,7 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
   
   # Save parameters
   output$parameters <- base::list(n.realisations = n.realisations,
-                                  nprob = nprob, cpus = cpus, stub = stub, type = type)
+                                  nprob = nprob, stub = stub, type = type)
   
   # Set up output directories
   outputdir <- file.path(outputdir)
@@ -156,64 +156,40 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
   # Make sure lookup table column names are correct
   names(lookup) <- c("name", "code")
   
-  # Parameter to pass to counts function as a global variable
-  param <- nrow(lookup)
-  assign("param", param, envir = .GlobalEnv)
-  
   # If raw predictions are used, calculate class probabilities by counting.
   if(type != "prob"){
     # Compute counts
-    raster::beginCluster(cpus)
-    counts <- raster::clusterR(realisations, calc,
-                               args = list(fun = function(x) {  
-                                 if (is.na(sum(x))) {
-                                   rep(NA, param)
-                                 } else {
-                                   tabulate(x, nbins = param)
-                                 }}),
-                               export = "param")
-    raster::endCluster()
+    counts <- terra::app(realisations, function(x) {
+      if(is.na(sum(x))) {
+        rep(NA, nrow(lookup))
+      } else {
+        tabulate(x, nbins = nrow(lookup))
+      }
+    }, wopt = list(names = lookup$name))
     
-    # Parameter to pass to probabilities function as a global variable
-    assign("n.realisations", n.realisations, envir = .GlobalEnv)
-    
-    # Compute probabilities
-    # probs = counts / n.realisations is faster on small datasets.
-    raster::beginCluster(cpus)
-    probs <- raster::clusterR(counts, calc,
-                              args = list(fun = function(x) {x / n.realisations}),
-                              export = "n.realisations")
-    raster::endCluster()
+    # Compute probabilities and write probabilities to raster files
+    probs <- (counts / n.realisations) %>% 
+      terra::writeRaster(filename = file.path(outputdir, "output", "probabilities",
+                                              paste0(stub, "prob_", names(.), ".tif")), 
+        overwrite = TRUE)
   }else{
     # If probabilistic predictions are used, calculate class probabilities by averaging
     # the predicted probabilities across the realisations.
     # If only one realisation is used, no averaging is needed.
     if(length(realisations) == 1 | n.realisations == 1){
-      probs <- realisations[[1]]
+      probs <- terra::writeRaster(realisations[[1]], 
+                                  filename = file.path(outputdir, "output", "probabilities", 
+                                                       paste0(stub, "prob_", names(realisations[[1]]), ".tif")), 
+                                  overwrite = TRUE)
     }else{
-      raster::beginCluster(cpus)
-      probs<-list()
-      for(i in 1:param)
-      {
-        rlist<-list()
-        for(j in 1:n.realisations){
-          rlist[[j]]<-realisations[[j]][[i]]
-        }
-        rlist<-stack(rlist)
-        probs[[i]]<-raster::clusterR(rlist, calc,args = list(fun = mean))
-      }
-      raster::endCluster()
-      probs<-stack(probs)
+      probs <- rast(lapply(1:nrow(lookup), function(i) {
+        rlist <- mean(rast(lapply(realisations, "[[", i)), na.rm = TRUE) %>% 
+          terra::writeRaster(file.path(
+            outputdir, "output", "probabilities", 
+            paste0(stub, "prob_", lookup$name[which(lookup$code == i)], ".tif")),
+            overwrite = TRUE, wopt = list(names = lookup$name[which(lookup$code == i)]))
+      }))
     }
-  }
-  
-  # Write probabilities to raster files
-  for(i in 1:raster::nlayers(probs))
-  {
-    raster::writeRaster((probs[[i]]),
-                        filename = file.path(outputdir, "output", "probabilities",
-                                             paste0(stub, "prob_", lookup$name[which(lookup$code == i)], ".tif")),
-                        format = "GTiff", overwrite = TRUE)
   }
   
   # Compute the class indices of the n-most-probable soil classes
@@ -221,54 +197,76 @@ summarise <- function(realisations, lookup, n.realisations = raster::nlayers(rea
   if(type != "prob")
   {
     # If raw class predictions are used, use "counts" for indicing.
-    ordered.indices <- order_stack_values(counts, cpus, n = nprob)
+    ordered.indices <- order_stack_values(counts, n = nprob)
     
   }else{
     # If probabilistic predictions are used, use "probs" for indicing.
-    ordered.indices <- order_stack_values(probs, cpus, n = nprob)
+    ordered.indices <- order_stack_values(probs, n = nprob)
   }
   
   # Compute the class probabilities of the n-most-probable soil classes
-  raster::beginCluster(cpus)
-  ordered.probs = raster::clusterR(probs, calc, 
-                                   args = list(fun = function(x) {
-                                     if (is.na(sum(x))) {
-                                       rep(NA, max(2,nprob))
-                                     } else { 
-                                       sort(x, decreasing = TRUE, na.last = TRUE)[1:max(2,nprob)]
-                                     }
-                                   }
-                                   )
-  )
-  raster::endCluster()
+  ordered.probs <- sort_stack_values(probs, n = max(2, nprob))
   
-  for (i in 1:nprob)
-  {
-    # Write ith-most-probable soil class raster to file
-    raster::writeRaster(ordered.indices[[i]],
-                        filename = file.path(outputdir, "output", "mostprobable",
-                                             paste0(stub, "mostprob_",
-                                                    formatC(i, width = nchar(nrow(lookup)), format = "d", flag = "0"),
-                                                    "_class.tif")),
-                        format = "GTiff", overwrite = TRUE)
+  # Write nprob soil class rasters to files as factors
+  ordered.indices.factors <- rast(lapply(1:nprob, function(x) {
     
-    # Write ith-most-probable soil class probability raster to file
-    raster::writeRaster(ordered.probs[[i]],
-                        filename = file.path(outputdir, "output", "mostprobable",
-                                             paste0(stub, "mostprob_",
-                                                    formatC(i, width = nchar(nrow(lookup)), format = "d", flag = "0"),
-                                                    "_probs.tif")),
-                        format = "GTiff", overwrite = TRUE)
-  }
+    # Subset from stack
+    ordered.indices.factor <- as.factor(subset(ordered.indices, x))
+    
+    # Get factor labels and codes
+    lookup_labels <- data.frame(levels = levels(ordered.indices.factor)[[1]]$levels,
+                                code = levels(ordered.indices.factor)[[1]]$labels)
+    
+    # Merge with lookup table and rearrange
+    label_lookup <- lookup %>% 
+      merge(lookup_labels) %>% 
+      dplyr::select(levels, name, code)
+    
+    # Write full index to file
+    write.csv(label_lookup, file.path(
+      outputdir, "output", "mostprobable", 
+      paste0(stub, "mostprob_",
+             formatC(x, width = nchar(nrow(lookup)), format = "d", flag = "0"),
+             "_class_lut.csv")),
+      row.names = FALSE)
+    
+    # Apply factor levels and names to raster
+    levels(ordered.indices.factor) <- label_lookup[, c(1, 2)]
+    
+    # Write out factored raster
+    ordered.indices.factor <- terra::writeRaster(
+      ordered.indices.factor, filename = file.path(
+        outputdir, "output", "mostprobable", 
+        paste0(stub, "mostprob_",
+               formatC(x, width = nchar(nrow(lookup)), format = "d", flag = "0"),
+               "_class.tif")), 
+      overwrite = TRUE, wopt = list(datatype = "INT1U"))
+    
+    # Write associated probability file
+    ordered.probs.subset <- subset(ordered.probs, x) %>% 
+      writeRaster(filename = file.path(outputdir, "output", "mostprobable",
+                                       paste0(stub, "mostprob_",
+                                              formatC(x, width = nchar(nrow(lookup)), format = "d", flag = "0"),
+                                              "_probs.tif")),
+                  overwrite = TRUE)
+    
+    return(ordered.indices.factor)
+  }))
 
   # Compute the confusion index
-  confusion <- confusion_index(ordered.probs, cpus)
+  confusion <- confusion_index(ordered.probs) %>% 
+    writeRaster(filename = file.path(outputdir, "output", "mostprobable",
+                                     paste0(stub, "confusion.tif")),
+                overwrite = TRUE)
   
   # Compute Shannon's entropy on the class probabilities
-  shannon <- shannon_entropy(ordered.probs, cpus)
+  shannon <- shannon_entropy(ordered.probs) %>% 
+    writeRaster(filename = file.path(outputdir, "output", "mostprobable",
+                                     paste0(stub, "shannon.tif")),
+                overwrite = TRUE)
   
   # Save finish time
-  output$timing$finish <- base::date()
+  output$timing$finish <- Sys.time()
   
   # Return output
   return(output)
