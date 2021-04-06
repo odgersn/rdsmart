@@ -6,6 +6,12 @@
 using namespace Rcpp;
 using namespace std;
 
+//' C++ Sorting algorithm
+//' 
+//' @param x A numeric vector to be sorted
+//' @param decreasing set to TRUE or FALSE to sort in decreasing order
+//' @param nalast Place NA values at the end of the string?
+//' @export
 // [[Rcpp::export]]
 NumericVector sort_cpp(NumericVector x, bool decreasing = false, bool nalast = false) {
   NumericVector y = clone(x);

@@ -22,6 +22,11 @@ IntegerVector order_impl(const Vector<RTYPE>& x, bool decreasing) {
   return idx;
 }
 
+//' C++ Ordering algorithm
+//' 
+//' @param x A numeric vector to be ordered
+//' @param decreasing Set to TRUE or FALSE to order in decreasing order
+//' @export
 // [[Rcpp::export]]
 IntegerVector order_cpp(SEXP x, bool decreasing = false) {
   switch(TYPEOF(x)) {
