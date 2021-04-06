@@ -208,50 +208,75 @@ summarise <- function(realisations, lookup,
   ordered.probs <- sort_stack_values(probs, n = max(2, nprob))
   
   # Write nprob soil class rasters to files as factors
-  ordered.indices.factors <- rast(lapply(1:nprob, function(x) {
-    
-    # Subset from stack
-    ordered.indices.factor <- as.factor(subset(ordered.indices, x))
-    
-    # Get factor labels and codes
-    lookup_labels <- data.frame(levels = levels(ordered.indices.factor)[[1]]$levels,
-                                code = levels(ordered.indices.factor)[[1]]$labels)
-    
-    # Merge with lookup table and rearrange
-    label_lookup <- lookup %>% 
-      merge(lookup_labels) %>% 
-      dplyr::select(levels, name, code)
-    
-    # Write full index to file
-    write.csv(label_lookup, file.path(
-      outputdir, "output", "mostprobable", 
-      paste0(stub, "mostprob_",
-             formatC(x, width = nchar(nrow(lookup)), format = "d", flag = "0"),
-             "_class_lut.csv")),
-      row.names = FALSE)
-    
-    # Apply factor levels and names to raster
-    levels(ordered.indices.factor) <- label_lookup[, c(1, 2)]
-    
-    # Write out factored raster
-    ordered.indices.factor <- terra::writeRaster(
-      ordered.indices.factor, filename = file.path(
-        outputdir, "output", "mostprobable", 
-        paste0(stub, "mostprob_",
-               formatC(x, width = nchar(nrow(lookup)), format = "d", flag = "0"),
-               "_class.tif")), 
-      overwrite = TRUE, wopt = list(datatype = "INT1U"))
-    
-    # Write associated probability file
-    ordered.probs.subset <- subset(ordered.probs, x) %>% 
-      writeRaster(filename = file.path(outputdir, "output", "mostprobable",
-                                       paste0(stub, "mostprob_",
-                                              formatC(x, width = nchar(nrow(lookup)), format = "d", flag = "0"),
-                                              "_probs.tif")),
-                  overwrite = TRUE)
-    
-    return(ordered.indices.factor)
-  }))
+  levels(ordered.indices) <- lapply(1:nprob, function(x) 
+    lookup %>% dplyr::select(code, name))
+  
+  ordered.ind.names <- paste0(
+    stub, "mostprob_", formatC(1:nprob, width = nchar(nrow(lookup)), 
+                               format = "d", flag = "0"), "_class")
+  
+  ordered.indices <- terra::writeRaster(
+    ordered.indices, filename = file.path(
+      outputdir, "output", "mostprobable",
+      paste0(ordered.ind.names, ".tif")),
+    overwrite = TRUE, wopt = list(datatype = "INT1U", names = ordered.ind.names))
+  
+  # Write most probable layers
+  ordered.prob.names <- paste0(
+    stub, "mostprob_", formatC(1:nprob, width = nchar(nrow(lookup)), 
+                               format = "d", flag = "0"), "_probs")
+  
+  ordered.probs.out <- subset(ordered.probs, 1:nprob) %>% 
+    writeRaster(filename = file.path(
+      outputdir, "output", "mostprobable",
+      paste0(ordered.prob.names, ".tif")),
+      overwrite = TRUE, wopt = list(names = ordered.prob.names))
+  
+  # ordered.indices.factors <- rast(lapply(1:nprob, function(x) {
+  #   
+  #   # Subset from stack
+  #   # ordered.indices.factor <- as.factor(subset(ordered.indices, x))
+  #   ordered.indices.sub <- subset(ordered.indices, x)
+  #   
+  #   # Get factor labels and codes
+  #   lookup_labels <- data.frame(levels = levels(ordered.indices.factor)[[1]]$levels,
+  #                               code = levels(ordered.indices.factor)[[1]]$labels)
+  #   
+  #   # Merge with lookup table and rearrange
+  #   label_lookup <- lookup %>% 
+  #     merge(lookup_labels) %>% 
+  #     dplyr::select(levels, name, code)
+  #   
+  #   # Write full index to file
+  #   write.csv(label_lookup, file.path(
+  #     outputdir, "output", "mostprobable", 
+  #     paste0(stub, "mostprob_",
+  #            formatC(x, width = nchar(nrow(lookup)), format = "d", flag = "0"),
+  #            "_class_lut.csv")),
+  #     row.names = FALSE)
+  #   
+  #   # Apply factor levels and names to raster
+  #   levels(ordered.indices.factor) <- label_lookup[, c(1, 2)]
+  #   
+  #   # Write out factored raster
+  #   ordered.indices.factor <- terra::writeRaster(
+  #     ordered.indices.factor, filename = file.path(
+  #       outputdir, "output", "mostprobable", 
+  #       paste0(stub, "mostprob_",
+  #              formatC(x, width = nchar(nrow(lookup)), format = "d", flag = "0"),
+  #              "_class.tif")), 
+  #     overwrite = TRUE, wopt = list(datatype = "INT1U"))
+  #   
+  #   # Write associated probability file
+  #   ordered.probs.subset <- subset(ordered.probs, x) %>% 
+  #     writeRaster(filename = file.path(outputdir, "output", "mostprobable",
+  #                                      paste0(stub, "mostprob_",
+  #                                             formatC(x, width = nchar(nrow(lookup)), format = "d", flag = "0"),
+  #                                             "_probs.tif")),
+  #                 overwrite = TRUE)
+  #   
+  #   return(ordered.indices.factor)
+  # }))
 
   # Compute the confusion index
   confusion <- confusion_index(ordered.probs) %>% 
