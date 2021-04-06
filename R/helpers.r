@@ -352,7 +352,8 @@
   
   # Extract covariates at observation locations
   o.covariates <- observations %>% 
-    cbind(terra::extract(covariates, observations[, c("x", "y")]))
+    cbind(terra::extract(covariates, observations[, c("x", "y")])) %>% 
+    dplyr::select(-ID)
   
   # Join covariates back to observations
   meta <- list(realisation = numeric(length = nrow(observations)), 
