@@ -8,12 +8,10 @@ Authors@R: c(person("Nathan", "Odgers", email = "n.p.odgers@gmail.com", role = c
     person(given = "Anders", middle = "Bjørn", family = "Møller", role = "aut", email = "anbm@agro.au.dk"))
 Description: Disaggregate and harmonise soil map unit polygons.
 Depends: R (>= 3.0.1)
-Imports: raster, rgdal, sp, C50, gtools,
-    rgeos, magrittr, dplyr, sf, data.table,
-    doParallel, foreach
+LinkingTo: Rcpp
+Imports: Rcpp, terra, gtools, magrittr, dplyr, mlr3, mlr3extralearners
+Remotes: github::mlr-org/mlr3extralearners
 Suggests: 
-    rasterVis,
-    snow,
     testthat
 License: GPL-2
 LazyData: no
