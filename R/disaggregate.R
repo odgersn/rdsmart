@@ -225,10 +225,15 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
   }
   
   # Check that required package is installed and loaded for use
-  pkgs <- unlist(valid_learners[id == method.model]$required_packages)
+  pkgs <- valid_learners %>% 
+    dplyr::filter(id == method.model) %>% 
+    dplyr::pull(required_packages) %>% 
+    unlist()
+  
+  # pkgs <- unlist(valid_learners[id == method.model]$required_packages)
   pkg_require <- pkgs[!(pkgs %in% installed.packages()[, "Package"])]
   if(length(pkg_require)) mlr3extralearners::install_learners(method.model)
-  invisible(sapply(pkgs, require, character.only = TRUE))
+  invisible(sapply(pkgs, requireNamespace, quietly = FALSE))
   
   # Check that args.model will work as expected
   model <- lrn(method.model, predict_type = type)
