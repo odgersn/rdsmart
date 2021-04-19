@@ -1,15 +1,16 @@
 Package: rdsmart
 Type: Package
 Title: Disaggregation and harmonisation of soil map units through resampled classification trees
-Version: 2.0.28
+Version: 2.1.0
 Date: 2021-02-10
 Authors@R: c(person("Nathan", "Odgers", email = "n.p.odgers@gmail.com", role = c("cre", "aut")),
     person("Brendan", "Malone", email = "brendan.malone@sydney.edu.au", role = "aut"),
-    person(given = "Anders", middle = "Bjørn", family = "Møller", role = "aut", email = "anbm@agro.au.dk"))
+    person(given = "Anders", middle = "Bjørn", family = "Møller", role = "aut", email = "anbm@agro.au.dk"),
+    person("Matthew G.", "Coghill", role = "aut", email = "matthewcoghill@live.ca"))
 Description: Disaggregate and harmonise soil map unit polygons.
-Depends: R (>= 3.0.1)
+Depends: R (>= 3.5.0)
 LinkingTo: Rcpp
-Imports: Rcpp, terra, gtools, magrittr, dplyr, mlr3, mlr3extralearners
+Imports: Rcpp, terra (>= 1.1-17), gtools, magrittr, dplyr, mlr3, mlr3extralearners
 Remotes: github::mlr-org/mlr3extralearners
 Suggests: 
     testthat
