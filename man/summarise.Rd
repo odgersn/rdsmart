@@ -7,16 +7,16 @@
 summarise(
   realisations,
   lookup,
-  n.realisations = raster::nlayers(realisations),
+  n.realisations = ifelse(is.list(realisations), length(realisations),
+    terra::nlyr(realisations)),
   nprob = 3,
-  cpus = 1,
   outputdir = getwd(),
   stub = NULL,
-  type = "raw"
+  type = "response"
 )
 }
 \arguments{
-\item{realisations}{A \code{RasterStack} where each layer contains one 
+\item{realisations}{A \code{SpatRaster} where each layer contains one 
 realisation of the soil class distribution across the soil map area, as 
 produced by \code{\link{disaggregate}}. If probabilistic predictions are
 used (\code{type = "prob"}), a list of RasterBrick objects with predicted
@@ -32,7 +32,7 @@ soil class code.}
 
 \item{n.realisations}{An integer that identifies the number of realisations
 of the soil class distribution that were computed by \code{disaggregate}.
-Default value is \code{raster::nlayers(realisations)}.}
+Default value is \code{terra::nlyr(realisations)}.}
 
 \item{nprob}{At any location, disaggregated soil class predictions can be 
 ranked according to their probabilities of occurence. \code{rdsmart} can 
@@ -41,9 +41,6 @@ map the class predictions, and their probabilities, at any rank.
 to map. For example, if \code{n = 3}, DSMART will map the first-, second- 
 and third-most-probable soil classes and their probabilities of occurrence.}
 
-\item{cpus}{An integer that identifies the number of CPU processors to use 
-for parallel processing.}
-
 \item{outputdir}{A character string that identifies the location of the main 
 output directory. The folder \code{output} and its subfolders will be 
 placed here. Default is the current working directory, \code{getwd()}.}
@@ -51,9 +48,9 @@ placed here. Default is the current working directory, \code{getwd()}.}
 \item{stub}{\emph{optional} A character string that identifies a short name
 that will be prepended to all output.}
 
-\item{prob}{A character vector to specify the type of the predictions to be 
-summarised. By default, raw class predictions are used. If set to "prob",
-probabilistic predictions are used.}
+\item{type}{A character vector to specify the type of the predictions to be 
+summarised. By default, "response" class predictions are used. If set to 
+"prob", probabilistic predictions are used.}
 }
 \value{
 A list that contains metadata about the current run of
@@ -75,7 +72,7 @@ data(dalrymple_lookup)
 data(dalrymple_realisations)
 
 # Summarise
-summarise(dalrymple_realisations, dalrymple_lookup, nprob = 5, cpus = 6)
+summarise(dalrymple_realisations, dalrymple_lookup, nprob = 5)
 
 }
 \references{

@@ -2,17 +2,23 @@
 % Please edit documentation in R/helpers.r
 \name{order_stack_values}
 \alias{order_stack_values}
-\title{Order raster stack values}
+\title{Order raster stack (i.e.: multi-layered SpatRaster) values.}
 \usage{
-order_stack_values(r, cpus, n = nlayers(r))
+order_stack_values(r, n = nlyr(r))
 }
 \arguments{
-\item{r}{A \code{RasterStack} whose layers contain the values to be ordered.}
+\item{r}{A \code{SpatRaster} whose layers contain the values to be ordered.}
 
-\item{n_prob}{}
+\item{n}{At any location, disaggregated soil class predictions can be 
+ranked according to their probabilities of occurrence. \code{rdsmart} can 
+map the class predictions, and their probabilities, at any rank. 
+\code{nprob} is an integer that identifies the number of probability ranks 
+to map. For example, if \code{nprob = 3}, DSMART will map the first-, 
+second- and third-most-probable soil classes and their probabilities of 
+occurrence.}
 }
 \value{
-A \code{RasterStack} containing the sorted data.
+A \code{SpatRaster} containing the sorted data.
 }
 \description{
 This function orders the values in a raster stack. Ordering is performed on
@@ -25,5 +31,6 @@ the values in the original raster stack \code{r}. For example, the values in
 the first returned layer identify the layer index of the original raster
 stack in which the largest value was found; the values in the second returned
 layer identify the original layer index in which the second largest value was
-found, and so-on.
+found, and so-on. A custom ordering algorithm written in C++ is used to 
+decrease processing time.
 }

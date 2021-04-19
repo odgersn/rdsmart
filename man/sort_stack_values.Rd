@@ -4,13 +4,10 @@
 \alias{sort_stack_values}
 \title{Sort raster stack values}
 \usage{
-sort_stack_values(r, cpus, n = nlayers(r), decreasing = TRUE)
+sort_stack_values(r, n = nlyr(r), decreasing = TRUE)
 }
 \arguments{
-\item{r}{A \code{RasterStack} whose layers contain the values to be sorted.}
-
-\item{cpus}{An integer that identifies the number of CPU nodes for parallel
-processing.}
+\item{r}{A \code{SpatRaster} whose layers contain the values to be sorted.}
 
 \item{n}{An integer that identifies the number of layers in \code{r} that
 should be sorted. Default is to sort all layers in \code{r}.}
@@ -19,10 +16,11 @@ should be sorted. Default is to sort all layers in \code{r}.}
 decreasing order (\code{TRUE}) or not (\code{FALSE}).}
 }
 \value{
-A \code{RasterStack} containing the sorted data.
+A \code{SpatRaster} containing the sorted data.
 }
 \description{
 #' This function sorts the values in a raster stack. Sorting is performed on
 the vector of values at each grid cell. See \code{\link[base]{sort}} for more
-information about how ordering works.
+information about how ordering works. A custom sorting algorithm written in 
+C++ is used to decrease processing time
 }

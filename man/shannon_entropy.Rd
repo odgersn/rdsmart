@@ -4,17 +4,14 @@
 \alias{shannon_entropy}
 \title{Compute Shannon's entropy}
 \usage{
-shannon_entropy(r, cpus)
+shannon_entropy(r, nprob = 3, do.sort = FALSE)
 }
 \arguments{
-\item{r}{A RasterStack of probabilities, where each layer corresponds to a
+\item{r}{A SpatRaster of probabilities, where each layer corresponds to a
 different soil class.}
-
-\item{cpus}{An integer that identifies the number of CPU nodes for parallel
-processing.}
 }
 \value{
-A \code{RasterLayer} containing the Shannon entropy values.
+A \code{SpatRaster} containing the Shannon entropy values.
 }
 \description{
 Shannon's entropy is an estimate of the prediction uncertainty.
@@ -22,7 +19,7 @@ Shannon's entropy is an estimate of the prediction uncertainty.
 \details{
 Shannon's entropy is computed as follows:
 
-\deqn{H=-\sum_{i=1}^{n_\text{orders}}{P_i\log_{n_\text{orders}}P_i}}
+\deqn{H=-\sum{i=1}^{n_\text{orders}}{P_i\log_{n_\text{orders}}P_i}}
 
 where \eqn{P_i} is the probability of occurrence of soil class \eqn{i}. The
 logarithm with base \eqn{n_\text{orders}} is used so that the maximum entropy

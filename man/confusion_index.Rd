@@ -4,17 +4,14 @@
 \alias{confusion_index}
 \title{Compute confusion index}
 \usage{
-confusion_index(r, cpus)
+confusion_index(r, do.sort = FALSE)
 }
 \arguments{
-\item{r}{A RasterStack of probabilities, where each layer corresponds to a
+\item{r}{A SpatRaster of probabilities, where each layer corresponds to a
 different soil class.}
-
-\item{cpus}{An integer that identifies the number of CPU nodes for parallel
-processing.}
 }
 \value{
-A \code{RasterLayer} containing the confusion index data.
+A \code{SpatRaster} containing the confusion index data.
 }
 \description{
 The confusion index is an estimate of the prediction uncertainty.
@@ -22,7 +19,7 @@ The confusion index is an estimate of the prediction uncertainty.
 \details{
 The confusion index is computed as follows:
 
-\deqn{C = 1-(P_1-P_2); P_1\geqslant{P_2}}
+\deqn{C = 1-(P_1-P_2); P_1\ge{P_2}}
 
 where \eqn{P_1} is the probability of the most probable class and \eqn{P_2}
 is the probability of the second most probable class (after Burrough \emph{et
