@@ -1,10 +1,10 @@
 useDynLib(rdsmart, .registration=TRUE)
 importFrom("Rcpp", sourceCpp)
 importFrom("mlr3", lrn, TaskClassif)
-importFrom("terra", Arith, Math, Math2, mean, predict, extract, nlyr, writeRaster, rast, as.data.frame, subset, as.factor, levels, terraOptions)
 importFrom("gtools", rdirichlet)
 importFrom(magrittr, "%>%")
-importMethodsFrom("terra", "[[", rast)
+importFrom("terra", terraOptions)
+importMethodsFrom("terra", "[[", Arith, Math, Math2, mean, predict, extract, nlyr, writeRaster, rast, as.data.frame, subset, levels)
 
 export(disaggregate)
 export(summarise)
