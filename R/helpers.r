@@ -1,17 +1,17 @@
-#' Sample the polygons of a SpatialPolygonsDataFrame.
+#' Sample the polygons of a SpatVector
 #' 
-#' \code{.getVirtualSamples} samples the polygons of a SpatialPolygonsDataFrame.
-#' It accomplishes three tasks: (i) it draws samples from within each polygon, 
+#' \code{.getVirtualSamples} samples the polygons of a SpatVector. It 
+#' accomplishes three tasks: (i) it draws samples from within each polygon, 
 #' (ii) extracts the values of the covariates at the sample locations, and (iii)
 #' through \code{.allocate}, allocates each sample to a soil class. See 
 #' \emph{Details} for more information.
 #' 
-#' @param covariates A \code{RasterStack} of \emph{scorpan} environmental 
+#' @param covariates A \code{SpatRaster} of \emph{scorpan} environmental 
 #'   covariates to calibrate the \code{C50} classification trees against. See 
 #'   \emph{Details} for more information.
-#' @param polygons A \code{SpatialPolygonsDataFrame} containing the soil map 
-#'   unit polygons that will be disaggregated. The first field of the data frame
-#'   must be an integer that identifies each polygon.
+#' @param polygons A \code{SpatVector} containing the soil map unit polygons 
+#'   that will be disaggregated. The first field of the data frame must be an 
+#'   integer that identifies each polygon.
 #' @param composition A \code{data.frame} that contains information on the 
 #'   soil-class composition of each polygon in \code{polygons}. Each row 
 #'   contains information about one soil class component of one polygon, which 
@@ -27,7 +27,7 @@
 #'   from each polygon in each realisation. If \code{method.sample =
 #'   "by_polygon"}, the number of samples to draw from each polygon in
 #'   \code{polygons}. If \code{method.sample = "by_area"}, the sampling density
-#'   in number of samples per square kilometre.
+#'   in number of samples per square kilometer.
 #' @param method.sample Identifies the sampling method. Valid values are 
 #'   \code{"by_polygon"} (the default), in which case the same number of samples
 #'   are taken from each polygon; or \code{"by_area"}, in which case the number 
@@ -39,8 +39,6 @@
 #'   from within the virtual sample's map unit; and \code{"random_all"}, for 
 #'   completely random allocation to a soil class from within the entire map 
 #'   area.
-#' @param cpus An integer that identifies the number of CPU processors to use 
-#'   for parallel processing.
 #' 
 .getVirtualSamples <- function(covariates, polygons, composition, 
                                n.realisations = 100, rate = 15, 
@@ -157,8 +155,8 @@
   samples <- dplyr::bind_rows(lapply(1:length(polygons), function(x) {
     
     # Subset a polygon
-    poly <- polygons[x, 1]
     poly.id = as.data.frame(polygons[x, 1])[, 1]
+    poly <- polygons[x, 1]
     
     # cat(paste0(
     #   "\nGenerating stratified samples for polygon ", 
@@ -368,66 +366,7 @@
   return(obs)
 }
 
-
-#' Compute raster::clusterR tuning parameter m
-#'
-#' This function computes a value for the \code{\link[raster]{clusterR}} tuning
-#' parameter \code{m}.
-#'
-#' \code{clusterR} subdivides a large raster into a set of tiles where each tile
-#' has the same number of columns as the original raster, but a smaller number
-#' of rows. The total number of tiles is equal to \code{m} * \code{n}, where
-#' \code{n} is the number of CPU cores (see \code{\link[raster]{beginCluster}})
-#' and \code{m} is the number of tiles per CPU core.
-#'
-#' This function calculates the number of tiles per CPU core, \code{m}, given
-#' the number of CPU cores, the dimensions of the overall raster, and the
-#' desired tile size expressed as the number of grid cells per tile (default
-#' value 1,000,000).
-#'
-#' If the number of grid cells in the overall raster is smaller than the desired
-#' tile size, the function returns a value of 2, which is the default value of
-#' \code{m} in \code{clusterR}.
-#'
-#' @param rows An integer that identifies the number of rows in the target grid.
-#' @param cols An integer that identifies the number of columns in the target
-#'   grid.
-#' @param cpus An integer that identifies the number of CPU nodes for parallel
-#'   processing.
-#' @param max_cells An integer that identifies the number of cells allowed in
-#'   each block.
-#'
-#' @return
-#'
-#' @examples
-
-#### THIS IS NO LONGER USEFUL UNDER terra PACKAGE
-# .blocks_per_node <- function(rows, cols, cpus, max_cells = 1000000) {
-#   
-#   # Initialise tuning variable
-#   m <- NA
-#   
-#   if(max_cells < (rows * cols)) {
-#     # Compute the number of rows per block
-#     block_rows <- max_cells / cols
-#     
-#     # Compute the number of blocks in the whole grid
-#     total_blocks <- rows / block_rows
-#     
-#     # Compute the number of blocks per CPU
-#     m <- ceiling(total_blocks / cpus)
-#     
-#   } else {
-#     # May revise this in the future
-#     m <- 2
-#   }
-#   
-#   # Return tuning variable
-#   return(m)
-# }
-
-
-#' Order raster stack values
+#' Order raster stack (i.e.: multi-layered SpatRaster) values.
 #'
 #' This function orders the values in a raster stack. Ordering is performed on
 #' the vector of values at each grid cell. See \code{\link[base]{order}} for
@@ -438,12 +377,19 @@
 #' the first returned layer identify the layer index of the original raster
 #' stack in which the largest value was found; the values in the second returned
 #' layer identify the original layer index in which the second largest value was
-#' found, and so-on.
+#' found, and so-on. A custom ordering algorithm written in C++ is used to 
+#' decrease processing time.
 #'
-#' @param r A \code{RasterStack} whose layers contain the values to be ordered.
-#' @param n_prob
+#' @param r A \code{SpatRaster} whose layers contain the values to be ordered.
+#' @param n At any location, disaggregated soil class predictions can be 
+#'   ranked according to their probabilities of occurrence. \code{rdsmart} can 
+#'   map the class predictions, and their probabilities, at any rank. 
+#'   \code{nprob} is an integer that identifies the number of probability ranks 
+#'   to map. For example, if \code{nprob = 3}, DSMART will map the first-, 
+#'   second- and third-most-probable soil classes and their probabilities of 
+#'   occurrence.
 #'
-#' @return A \code{RasterStack} containing the sorted data.
+#' @return A \code{SpatRaster} containing the sorted data.
 #'
 #' @export
 #' 
@@ -465,15 +411,16 @@ order_stack_values <- function(r, n = nlyr(r)) {
 #'
 #' #' This function sorts the values in a raster stack. Sorting is performed on
 #' the vector of values at each grid cell. See \code{\link[base]{sort}} for more
-#' information about how ordering works.
+#' information about how ordering works. A custom sorting algorithm written in 
+#' C++ is used to decrease processing time
 #'
-#' @param r A \code{RasterStack} whose layers contain the values to be sorted.
+#' @param r A \code{SpatRaster} whose layers contain the values to be sorted.
 #' @param n An integer that identifies the number of layers in \code{r} that
 #'   should be sorted. Default is to sort all layers in \code{r}.
 #' @param decreasing A boolean that indicates whether values should be sorted in
 #'   decreasing order (\code{TRUE}) or not (\code{FALSE}).
 #'
-#' @return A \code{RasterStack} containing the sorted data.
+#' @return A \code{SpatRaster} containing the sorted data.
 #'
 #' @export
 #'
@@ -497,7 +444,7 @@ sort_stack_values <- function(r, n = nlyr(r), decreasing = TRUE) {
 #'
 #' The confusion index is computed as follows:
 #'
-#' \deqn{C = 1-(P_1-P_2); P_1\geqslant{P_2}}
+#' \deqn{C = 1-(P_1-P_2); P_1\ge{P_2}}
 #'
 #' where \eqn{P_1} is the probability of the most probable class and \eqn{P_2}
 #' is the probability of the second most probable class (after Burrough \emph{et
@@ -508,10 +455,10 @@ sort_stack_values <- function(r, n = nlyr(r), decreasing = TRUE) {
 #' This function computes the confusion index. It first sorts the probabilities
 #' for each grid cell in descending order using \code{\link{sort_stack_values}}.
 #'
-#' @param r A RasterStack of probabilities, where each layer corresponds to a
+#' @param r A SpatRaster of probabilities, where each layer corresponds to a
 #'   different soil class.
 #'
-#' @return A \code{RasterLayer} containing the confusion index data.
+#' @return A \code{SpatRaster} containing the confusion index data.
 #'
 #' @references Burrough, P.A., van Gaans, P.F.M., Hootsmans, R., 1997.
 #'   Continuous classification in soil survey: spatial correlation, confusion
@@ -534,6 +481,7 @@ confusion_index <- function(r, do.sort = FALSE) {
     r <- sort_stack_values(r, n = 2)
   }
   
+  # Force writing of layer to a temp file
   defops <- terra:::spatOptions()$todisk
   terraOptions(todisk = TRUE)
   output <- (1 - (r[[1]] - r[[2]]))
@@ -548,7 +496,7 @@ confusion_index <- function(r, do.sort = FALSE) {
 #'
 #' Shannon's entropy is computed as follows:
 #'
-#' \deqn{H=-\sum_{i=1}^{n_\text{orders}}{P_i\log_{n_\text{orders}}P_i}}
+#' \deqn{H=-\sum{i=1}^{n_\text{orders}}{P_i\log_{n_\text{orders}}P_i}}
 #'
 #' where \eqn{P_i} is the probability of occurrence of soil class \eqn{i}. The
 #' logarithm with base \eqn{n_\text{orders}} is used so that the maximum entropy
@@ -556,10 +504,10 @@ confusion_index <- function(r, do.sort = FALSE) {
 #' (Kempen \emph{et al.}, 2009). The minimum entropy is 0, which occurs when one
 #' soil order has a probability of 1 and all others zero (minimum uncertainty).
 #'
-#' @param r A RasterStack of probabilities, where each layer corresponds to a
+#' @param r A SpatRaster of probabilities, where each layer corresponds to a
 #'   different soil class.
 #'
-#' @return A \code{RasterLayer} containing the Shannon entropy values.
+#' @return A \code{SpatRaster} containing the Shannon entropy values.
 #'
 #' @references Kempen, B., Brus, D.J., Heuvelink, G.B.M., Stoorvogel, J.J.,
 #'   2009. Updating the 1:50,000 Dutch soil map using legacy soil data: a
@@ -576,6 +524,7 @@ shannon_entropy <- function(r, nprob = 3, do.sort = FALSE) {
     r <- sort_stack_values(r, n = max(2, nprob))
   }
   
+  # Force writing of layer to a temp file
   defops <- terra:::spatOptions()$todisk
   terraOptions(todisk = TRUE)
   output <- -sum(r * (log(r, base = nlyr(r))), na.rm = TRUE)

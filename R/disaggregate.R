@@ -12,7 +12,7 @@
 #' There is no prescription for the layers that compose \code{covariates} other
 #' than that they should represent the \emph{scorpan} factors (McBratney
 #' \emph{et al.}, 2003) as effectively as possible. The order of the layers in
-#' the RasterStack is not important. See \code{data(dsT_covariates)} for an
+#' the SpatRaster is not important. See \code{data(dsT_covariates)} for an
 #' example.
 #'
 #' DSMART assumes, but does not currently check, that \code{covariates},
@@ -31,12 +31,12 @@
 #' the \code{realisations} subfolder and the classification models are saved
 #' into the \code{models} subfolder.
 #'
-#' @param covariates A \code{RasterStack} of \emph{scorpan} environmental
+#' @param covariates A \code{SpatRaster} of \emph{scorpan} environmental
 #'   covariates to calibrate the \code{C50} classification trees against. See
 #'   \emph{Details} for more information.
-#' @param polygons A \code{SpatialPolygonsDataFrame} containing the soil map
-#'   unit polygons that will be disaggregated. The first field of the data frame
-#'   must be an integer that identifies each polygon.
+#' @param polygons A \code{SpatVector} containing the soil map unit polygons 
+#'   that will be disaggregated. The first field of the data frame must be an 
+#'   integer that identifies each polygon.
 #' @param composition A \code{data.frame} that contains information on the
 #'   soil-class composition of each polygon in \code{polygons}. Each row
 #'   contains information about one soil class component of one polygon, which
@@ -50,7 +50,7 @@
 #'   that the soil class corresponds to. See the example data
 #'   \code{data(dalrymple_composition)}.
 #'
-#'   If \code{strata} is a \code{RasterLayer}, third column contains an integer
+#'   If \code{strata} is a \code{SpatRaster}, third column contains an integer
 #'   that identifies the stratum in \code{strata}, fourth column contains a code
 #'   that identifies the soil class and fifth column contains a number in the
 #'   range \code{(0, 100)} that identifies the proportion of the
@@ -59,7 +59,7 @@
 #'   from each polygon in each realisation. If \code{method.sample =
 #'   "by_polygon"}, the number of samples to draw from each polygon in
 #'   \code{polygons}. If \code{method.sample = "by_area"}, the sampling density
-#'   in number of samples per square kilometre.
+#'   in number of samples per square kilometer.
 #' @param reals An integer that identifies the number of realisations of the
 #'   soil class distribution that DSMART should compute.
 #' @param observations \emph{Optional} A \code{data.frame} that contains actual
@@ -81,12 +81,13 @@
 #'   area.
 #' @param method.model Method to be used for the classification model. If no
 #'   value is passed, a C5.0 decision tree is built. Otherwise, the value must
-#'   match a valid 'method' argument in the caret::train function.
-#' @param method.args A list of arguments to be passed to the caret::train
-#'   function. The list can include a trainControl object, arguments to be
-#'   passed directly to the train function and arguments to be passed to the
-#'   predictive model.
-#' @param strata \emph{optional} An integer-valued \code{RasterLayer} that will
+#'   match a valid 'learner' argument in the mlr3::lrn() function.
+#' @param method.args A named list of arguments to be passed to the mlr3 learner
+#'   object. The list will modify the learner's 'param_set' which controls the 
+#'   behavior of the model. Named arguments are passed directly to the train 
+#'   function and predictive model. To view a model's given parameter set, use
+#'   \code{mlr3::lrn(method.model)$param_set}
+#' @param strata \emph{optional} An integer-valued \code{SpatRaster} that will
 #'   be used to stratify the allocation of virtual samples to soil classes.
 #'   Integer values could represent classes of slope position (e.g. crest,
 #'   backslope, footslope, etc.) or land use (e.g. cropland, native vegetation,
@@ -97,13 +98,11 @@
 #'   placed here. Default is the current working directory, \code{getwd()}.
 #' @param stub \emph{optional} A character string that identifies a short name
 #'   that will be prepended to all output.
-#' @param cpus An integer that identifies the number of CPU processors to use
-#'   for parallel processing.
 #' @param factors A character vector with the names of the covariates that
 #'   should be treated as factors.
-#' @param prob A character vector to specify the type of the predictions. By
-#'   default, raw class predictions are used. If set to "prob", a rasterbrick
-#'   with class probabilities will be produced for each realisation.
+#' @param type A character vector to specify the type of the predictions. By
+#'   default, "response" class predictions are used. If set to "prob", a 
+#'   SpatRaster with class probabilities will be produced for each realisation.
 #'
 #' @return A list that contains metadata about the current run of
 #'   \code{disaggregate}.
@@ -117,7 +116,7 @@
 #'
 #' # Run disaggregate without adding observations
 #' disaggregate(dalrymple_covariates, dalrymple_polygons, dalrymple_composition,
-#'  rate = 15, reals = 10, cpus = 6)
+#'  rate = 15, reals = 10)
 #'
 #' # Run disaggregate with extra observations
 #' disaggregate(dalrymple_covariates, dalrymple_polygons, dalrymple_composition,
@@ -433,7 +432,7 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
     #     s[,fcols[i]]<-as.factor(s[,fcols[i]])
     #   }}
     if(!is.null(factors)) {
-      s <- s %>% dplyr::mutate(across(factors, as.factor))
+      s <- s %>% dplyr::mutate(across(any_of(factors), as.factor))
     }
     
     # Test if there are levels in soil_class with 0 cases

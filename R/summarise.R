@@ -9,7 +9,7 @@
 #' class probabilities, and the degree of confusion between the most probable 
 #' and second-most-probable soil classes.
 #' 
-#' @param realisations A \code{RasterStack} where each layer contains one 
+#' @param realisations A \code{SpatRaster} where each layer contains one 
 #'   realisation of the soil class distribution across the soil map area, as 
 #'   produced by \code{\link{disaggregate}}. If probabilistic predictions are
 #'   used (\code{type = "prob"}), a list of RasterBrick objects with predicted
@@ -23,7 +23,7 @@
 #'   soil class code.
 #' @param n.realisations An integer that identifies the number of realisations
 #'   of the soil class distribution that were computed by \code{disaggregate}.
-#'   Default value is \code{raster::nlayers(realisations)}.
+#'   Default value is \code{terra::nlyr(realisations)}.
 #' @param nprob At any location, disaggregated soil class predictions can be 
 #'   ranked according to their probabilities of occurence. \code{rdsmart} can 
 #'   map the class predictions, and their probabilities, at any rank. 
@@ -35,9 +35,9 @@
 #'   placed here. Default is the current working directory, \code{getwd()}.
 #' @param stub \emph{optional} A character string that identifies a short name
 #'   that will be prepended to all output.
-#' @param prob A character vector to specify the type of the predictions to be 
-#'   summarised. By default, raw class predictions are used. If set to "prob",
-#'   probabilistic predictions are used.
+#' @param type A character vector to specify the type of the predictions to be 
+#'   summarised. By default, "response" class predictions are used. If set to 
+#'   "prob", probabilistic predictions are used.
 #'
 #' @return A list that contains metadata about the current run of
 #'   \code{summarise}.
@@ -63,7 +63,7 @@
 #' data(dalrymple_realisations)
 #' 
 #' # Summarise
-#' summarise(dalrymple_realisations, dalrymple_lookup, nprob = 5, cpus = 6)
+#' summarise(dalrymple_realisations, dalrymple_lookup, nprob = 5)
 #' 
 #' @export
 
@@ -72,9 +72,6 @@ summarise <- function(realisations, lookup,
                                               terra::nlyr(realisations)),
                       nprob = 3, outputdir = getwd(), stub = NULL, type = "response")
 {
-  # TO DELETE ONCE PACKAGE IS WRITTEN:
-  # Rcpp::sourceCpp("./src/order.cpp")
-  # Rcpp::sourceCpp("./src/sort.cpp")
   
   # Create list to store output
   output <- base::list()
@@ -231,52 +228,6 @@ summarise <- function(realisations, lookup,
       outputdir, "output", "mostprobable",
       paste0(ordered.prob.names, ".tif")),
       overwrite = TRUE, wopt = list(names = ordered.prob.names))
-  
-  # ordered.indices.factors <- rast(lapply(1:nprob, function(x) {
-  #   
-  #   # Subset from stack
-  #   # ordered.indices.factor <- as.factor(subset(ordered.indices, x))
-  #   ordered.indices.sub <- subset(ordered.indices, x)
-  #   
-  #   # Get factor labels and codes
-  #   lookup_labels <- data.frame(levels = levels(ordered.indices.factor)[[1]]$levels,
-  #                               code = levels(ordered.indices.factor)[[1]]$labels)
-  #   
-  #   # Merge with lookup table and rearrange
-  #   label_lookup <- lookup %>% 
-  #     merge(lookup_labels) %>% 
-  #     dplyr::select(levels, name, code)
-  #   
-  #   # Write full index to file
-  #   write.csv(label_lookup, file.path(
-  #     outputdir, "output", "mostprobable", 
-  #     paste0(stub, "mostprob_",
-  #            formatC(x, width = nchar(nrow(lookup)), format = "d", flag = "0"),
-  #            "_class_lut.csv")),
-  #     row.names = FALSE)
-  #   
-  #   # Apply factor levels and names to raster
-  #   levels(ordered.indices.factor) <- label_lookup[, c(1, 2)]
-  #   
-  #   # Write out factored raster
-  #   ordered.indices.factor <- terra::writeRaster(
-  #     ordered.indices.factor, filename = file.path(
-  #       outputdir, "output", "mostprobable", 
-  #       paste0(stub, "mostprob_",
-  #              formatC(x, width = nchar(nrow(lookup)), format = "d", flag = "0"),
-  #              "_class.tif")), 
-  #     overwrite = TRUE, wopt = list(datatype = "INT1U"))
-  #   
-  #   # Write associated probability file
-  #   ordered.probs.subset <- subset(ordered.probs, x) %>% 
-  #     writeRaster(filename = file.path(outputdir, "output", "mostprobable",
-  #                                      paste0(stub, "mostprob_",
-  #                                             formatC(x, width = nchar(nrow(lookup)), format = "d", flag = "0"),
-  #                                             "_probs.tif")),
-  #                 overwrite = TRUE)
-  #   
-  #   return(ordered.indices.factor)
-  # }))
 
   # Compute the confusion index
   confusion <- confusion_index(ordered.probs) %>% 
