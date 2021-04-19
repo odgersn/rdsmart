@@ -1,3 +1,10 @@
+# rdsmart 2.1.0
+* Replaced `raster` package functions with equivalent `terra` package functions. This requires at least `terra` version 1.1-17 (CRAN).
+* Wrote C++ sorting and ordering algorithms
+* Commented out the `.onAttach()` message since `terra` takes care of previous issues
+* Updated `NAMESPACE` and `DESCRIPTION` to handle package updates. Bumped minimum R version to 3.5.0 to mirror `terra` minimum version. Removed `C50` import since `disaggregate` will install and load external model packages.
+* Cleaned up man folder
+
 # rdsmart 2.0.28
 
 * Created `NEWS.md`.
