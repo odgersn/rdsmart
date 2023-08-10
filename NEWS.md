@@ -4,6 +4,11 @@
 
 * Spatial disaggregation using `method.sample = "by_area"` works properly again. Replaced use of deprecated function `terra::area()` with `terra::expanse()`. This *should* mean that rdsmart should be compatible with spatial data in a longitude/latitude CRS (but it's not tested).
 
+# rdsmart 2.1.1
+
+* Repackaged demonstration data `dalrymple_covariates` and `dalrymple_polygons` as (wrapped) SpatRaster and SpatVector objects respectively. Use `terra::unwrap()` to unwrap before use. Updated example code accordingly.
+* Added vignette by Matthew Coghill to explain major underlying changes to package from v2.1.0.
+
 # rdsmart 2.1.0
 
 * Replaced `raster` package functions with equivalent `terra` package functions. This requires at least `terra` version 1.1-17 (CRAN).
