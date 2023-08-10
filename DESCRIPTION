@@ -3,10 +3,21 @@ Type: Package
 Title: Disaggregation and harmonisation of soil map units through resampled classification trees
 Version: 2.1.1
 Date: 2023-08-10
-Authors@R: c(person("Nathan", "Odgers", email = "odgersn@landcareresearch.co.nz", role = c("cre", "aut")),
-    person("Brendan", "Malone", email = "brendan.malone@csiro.au", role = "aut"),
-    person(given = "Anders", middle = "Bjørn", family = "Møller", role = "aut", email = "anbm@agro.au.dk"),
-    person("Matthew G.", "Coghill", role = "aut", email = "matthewcoghill@live.ca"))
+Authors@R: c(person("Nathan", "Odgers", 
+                    email = "odgersn@landcareresearch.co.nz",
+                    role = c("cre", "aut"),
+                    comment = c(ORCID = "0000-0002-5934-0363")),
+    person("Brendan", "Malone",
+           email = "brendan.malone@csiro.au",
+           role = "aut",
+           comment = c(ORCID = "0000-0002-0473-8518")),
+    person(given = "Anders", middle = "Bjørn", family = "Møller",
+           email = "anbm@agro.au.dk",
+           role = "aut",
+           comment = c(ORCID = "0000-0002-2737-5780")),
+    person("Matthew G.", "Coghill",
+           email = "matthewcoghill@live.ca",
+           role = "aut"))
 Description: Disaggregate and harmonise soil map unit polygons.
 Depends: R (>= 3.5.0)
 LinkingTo: Rcpp
