@@ -142,11 +142,11 @@ data(dalrymple_observations)
 data(dalrymple_polygons)
 
 # Run dsmart without adding observations
-dsmart(dalrymple_covariates, dalrymple_polygons, dalrymple_composition,
+dsmart(unwrap(dalrymple_covariates), unwrap(dalrymple_polygons), dalrymple_composition,
  rate = 15, reals = 10)
 
 # Run dsmart with extra observations
-dsmart(dalrymple_covariates, dalrymple_polygons, dalrymple_composition,
+dsmart(unwrap(dalrymple_covariates), unwrap(dalrymple_polygons), dalrymple_composition,
  observations = dalrymple_observations, rate = 15, reals = 10)
 
 }

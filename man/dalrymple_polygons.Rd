@@ -6,7 +6,7 @@
 \title{A small part of the Land Resources of the Dalrymple Shire soil map from
 Queensland, Australia.}
 \format{
-An object of class \code{SpatialPolygonsDataFrame} with 11 rows and 12 columns.
+An object of class \code{PackedSpatVector} of length 1.
 }
 \usage{
 dalrymple_polygons

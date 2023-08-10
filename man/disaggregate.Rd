@@ -156,11 +156,11 @@ data(dalrymple_observations)
 data(dalrymple_polygons)
 
 # Run disaggregate without adding observations
-disaggregate(dalrymple_covariates, dalrymple_polygons, dalrymple_composition,
+disaggregate(unwrap(dalrymple_covariates), unwrap(dalrymple_polygons), dalrymple_composition,
  rate = 15, reals = 10)
 
 # Run disaggregate with extra observations
-disaggregate(dalrymple_covariates, dalrymple_polygons, dalrymple_composition,
+disaggregate(unwrap(dalrymple_covariates), unwrap(dalrymple_polygons), dalrymple_composition,
  observations = dalrymple_observations, rate = 15, reals = 10)
 
 }
