@@ -1,4 +1,11 @@
+# rdsmart 2.1.2
+
+## Bug fixes
+
+* Spatial disaggregation using `method.sample = "by_area"` works properly again. Replaced use of deprecated function `terra::area()` with `terra::expanse()`. This *should* mean that rdsmart should be compatible with spatial data in a longitude/latitude CRS (but it's not tested).
+
 # rdsmart 2.1.0
+
 * Replaced `raster` package functions with equivalent `terra` package functions. This requires at least `terra` version 1.1-17 (CRAN).
 * Wrote C++ sorting and ordering algorithms
 * Commented out the `.onAttach()` message since `terra` takes care of previous issues
