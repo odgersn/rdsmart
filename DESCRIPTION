@@ -13,8 +13,11 @@ LinkingTo: Rcpp
 Imports: Rcpp, terra (>= 1.1-17), gtools, magrittr, dplyr, mlr3, mlr3extralearners
 Remotes: github::mlr-org/mlr3extralearners
 Suggests: 
+    knitr,
+    rmarkdown,
     testthat
 License: GPL-2
 LazyData: no
 RoxygenNote: 7.1.1
 Encoding: UTF-8
+VignetteBuilder: knitr
