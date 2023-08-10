@@ -32,3 +32,4 @@ LazyData: no
 RoxygenNote: 7.2.3
 Encoding: UTF-8
 VignetteBuilder: knitr
+URL: https://odgersn.github.io/rdsmart/
