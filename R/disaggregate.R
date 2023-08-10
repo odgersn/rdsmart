@@ -115,11 +115,11 @@
 #' data(dalrymple_polygons)
 #'
 #' # Run disaggregate without adding observations
-#' disaggregate(dalrymple_covariates, dalrymple_polygons, dalrymple_composition,
+#' disaggregate(unwrap(dalrymple_covariates), unwrap(dalrymple_polygons), dalrymple_composition,
 #'  rate = 15, reals = 10)
 #'
 #' # Run disaggregate with extra observations
-#' disaggregate(dalrymple_covariates, dalrymple_polygons, dalrymple_composition,
+#' disaggregate(unwrap(dalrymple_covariates), unwrap(dalrymple_polygons), dalrymple_composition,
 #'  observations = dalrymple_observations, rate = 15, reals = 10)
 #'
 #' @references McBratney, A.B., Mendonca Santos, M. de L., Minasny, B., 2003. On
@@ -196,9 +196,11 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
     }
   }
   # If method.model is a character value, enforce proper learner detection
-  valid_learners <- mlr3extralearners::list_mlr3learners(filter = list(
-    class = "classif", predict_types = type,
-    properties = "multiclass"), select = c("name", "id", "required_packages"))
+  message("Loading list of mlr3 learners")
+  valid_learners <- 
+    mlr3extralearners::list_mlr3learners(
+      filter = list(class = "classif", predict_types = type, properties = "multiclass"),
+      select = c("name", "id", "required_packages"))
   
   if(!(is.null(method.model)))
   {
