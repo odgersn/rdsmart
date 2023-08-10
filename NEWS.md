@@ -1,4 +1,10 @@
+# rdsmart 2.1.1 (10 August 2023)
+
+* Repackaged demonstration data `dalrymple_covariates` and `dalrymple_polygons` as (wrapped) SpatRaster and SpatVector objects respectively. Use `terra::unwrap()` to unwrap before use. Updated example code accordingly.
+* Added vignette by Matthew Coghill to explain major underlying changes to package from v2.1.0.
+
 # rdsmart 2.1.0
+
 * Replaced `raster` package functions with equivalent `terra` package functions. This requires at least `terra` version 1.1-17 (CRAN).
 * Wrote C++ sorting and ordering algorithms
 * Commented out the `.onAttach()` message since `terra` takes care of previous issues
