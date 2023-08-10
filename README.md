@@ -4,8 +4,6 @@ This package is the R implementation of the disaggregating and harmonising soil 
 
 ## Installation
 
-This package depends on `terra` version 1.1-17 or greater. As of April 18, 2021, it is [available on CRAN](https://github.com/rspatial/terra) but requires compilation. This requires [Rtools](https://cran.r-project.org/bin/windows/Rtools/) on Windows machines.
-
 For installation in R the following commands work:
 
 ```
@@ -16,7 +14,7 @@ install.packages("devtools")
 library(devtools)
 
 # Install rdsmart from bitbucket
-install_bitbucket("brendo1001/dsmart")
+install_github("odgersn/rdsmart")
 ```
 
 ## References
