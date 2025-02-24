@@ -1,4 +1,4 @@
-library(raster)
+# library(raster)
 
 setwd("/home/brendo/myWork/dsmart/rPackage/dsmart/pkg/data")
 list.files()
@@ -26,7 +26,7 @@ setwd("/home/brendo/myWork/")
 
 
 #Run Functions
-library(rgdal); library(raster); library(sp); library(gtools); library(C50)
+# library(rgdal); library(raster); library(sp); library(gtools); library(C50)
 setwd("/home/brendo/myWork/dsmart/data")
 #dsmart
 dsmart(covariates = dsT_covariates, polygons = dsT_polygons, composition = dsT_composition, n=15, reals = 5, cpus=2)

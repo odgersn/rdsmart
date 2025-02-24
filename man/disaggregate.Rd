@@ -85,6 +85,12 @@ area.}
 value is passed, a C5.0 decision tree is built. Otherwise, the value must
 match a valid 'learner' argument in the mlr3::lrn() function.}
 
+\item{args.model}{A named list of arguments to be passed to the mlr3 learner
+object. The list will modify the learner's 'param_set' which controls the 
+behavior of the model. Named arguments are passed directly to the train 
+function and predictive model. To view a model's given parameter set, use
+\code{mlr3::lrn(method.model)$param_set}}
+
 \item{strata}{\emph{optional} An integer-valued \code{SpatRaster} that will
 be used to stratify the allocation of virtual samples to soil classes.
 Integer values could represent classes of slope position (e.g. crest,
@@ -105,12 +111,6 @@ should be treated as factors.}
 \item{type}{A character vector to specify the type of the predictions. By
 default, "response" class predictions are used. If set to "prob", a 
 SpatRaster with class probabilities will be produced for each realisation.}
-
-\item{method.args}{A named list of arguments to be passed to the mlr3 learner
-object. The list will modify the learner's 'param_set' which controls the 
-behavior of the model. Named arguments are passed directly to the train 
-function and predictive model. To view a model's given parameter set, use
-\code{mlr3::lrn(method.model)$param_set}}
 }
 \value{
 A list that contains metadata about the current run of

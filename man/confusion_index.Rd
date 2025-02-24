@@ -7,8 +7,8 @@
 confusion_index(r, do.sort = FALSE)
 }
 \arguments{
-\item{r}{A SpatRaster of probabilities, where each layer corresponds to a
-different soil class.}
+\item{r}{A SpatRaster of probabilities, where each layer corresponds to the 
+probability of occurrence of a different soil class.}
 }
 \value{
 A \code{SpatRaster} containing the confusion index data.

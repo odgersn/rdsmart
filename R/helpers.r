@@ -452,8 +452,8 @@ sort_stack_values <- function(r, n = nlyr(r), decreasing = TRUE) {
 #' This function computes the confusion index. It first sorts the probabilities
 #' for each grid cell in descending order using \code{\link{sort_stack_values}}.
 #'
-#' @param r A SpatRaster of probabilities, where each layer corresponds to a
-#'   different soil class.
+#' @param r A SpatRaster of probabilities, where each layer corresponds to the 
+#'   probability of occurrence of a different soil class.
 #'
 #' @return A \code{SpatRaster} containing the confusion index data.
 #'

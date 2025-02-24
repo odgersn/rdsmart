@@ -1,3 +1,10 @@
+# rdsmart 2.1.3
+
+* Fix bug in selection of mlr3 models using `disaggregate()` argument `method.model`
+* Correct `disaggregate()` and `sort_stack_values()` documentation
+* Remove dataset `dalrymple_realisations` to remove dependency on `raster` package
+* Add package `mlr3proba` to Imports
+
 # rdsmart 2.1.2
 
 ## Bug fixes

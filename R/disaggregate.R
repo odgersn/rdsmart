@@ -82,7 +82,7 @@
 #' @param method.model Method to be used for the classification model. If no
 #'   value is passed, a C5.0 decision tree is built. Otherwise, the value must
 #'   match a valid 'learner' argument in the mlr3::lrn() function.
-#' @param method.args A named list of arguments to be passed to the mlr3 learner
+#' @param args.model A named list of arguments to be passed to the mlr3 learner
 #'   object. The list will modify the learner's 'param_set' which controls the 
 #'   behavior of the model. Named arguments are passed directly to the train 
 #'   function and predictive model. To view a model's given parameter set, use
@@ -208,13 +208,13 @@ disaggregate <- function(covariates, polygons, composition, rate = 15,
     {
       messages <- append(messages, "'method.model' must be NULL or a single character value.\n")
     } else {
-      filt_learner <- valid_learners[name == method.model]
+      filt_learner <- dplyr::filter(valid_learners, name == method.model)
       if(!nrow(filt_learner)) 
       {
-        filt_learner <- valid_learners[id == method.model]
+        filt_learner <- dplyr::filter(valid_learners, id == method.model)
       } else {
         method.model <- paste0("classif.", method.model)
-        filt_learner <- valid_learners[id == method.model]
+        filt_learner <- dplyr::filter(valid_learners, id == method.model)
       }
       if(!nrow(filt_learner)) 
       {

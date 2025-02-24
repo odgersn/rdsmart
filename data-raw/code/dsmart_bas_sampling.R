@@ -3,7 +3,7 @@ library(data.table)
 library(doParallel)
 library(magrittr)
 library(microbenchmark)
-library(raster)
+# library(raster)
 library(sf)
 library(sp)
 

@@ -41,9 +41,3 @@
 #' Queensland, Australia.
 #'
 "dalrymple_polygons"
-
-#' Several realisations of the potential soil class distribution across a small
-#' part of the former Dalrymple Shire, Queensland, Australia.
-#'
-"dalrymple_realisations"
-
