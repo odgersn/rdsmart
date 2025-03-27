@@ -1,53 +1,53 @@
 #' Summarise the results of a DSMART spatial disaggregation.
 #' 
-#' \code{summarise} summarises the results of the spatial disaggregation of a 
+#' `summarise` summarises the results of the spatial disaggregation of a 
 #' polygon soil map in several ways. First, it computes the probabilities of 
 #' occurrence of the soil classes that occur across all the map's map units. 
 #' Second, it ranks the soil class predictions according to their probabilities 
-#' of occurrence and maps the \emph{n}-most-probable soil classes at each grid 
+#' of occurrence and maps the *n*-most-probable soil classes at each grid 
 #' cell, and their probabilities. Finally, it computes Shannon's entropy on the
 #' class probabilities, and the degree of confusion between the most probable 
 #' and second-most-probable soil classes.
 #' 
-#' @param realisations A \code{SpatRaster} where each layer contains one 
+#' @param realisations A SpatRaster where each layer contains one 
 #'   realisation of the soil class distribution across the soil map area, as 
-#'   produced by \code{\link{disaggregate}}. If probabilistic predictions are
-#'   used (\code{type = "prob"}), a list of RasterBrick objects with predicted
+#'   produced by [disaggregate()]. If probabilistic predictions are
+#'   used (`type = "prob"`), a list of RasterBrick objects with predicted
 #'   class probabilities must be passed.
-#' @param lookup A two-column \code{data.frame} containing a mapping between the
-#'   integer soil class codes in the layers of \code{realisations}, and the soil
-#'   class codes defined by the map unit composition \code{data.frame} used as
-#'   an argument to \code{disaggregate} and \code{dsmart}. \code{lookup} is the
-#'   same lookup table that is produced by \code{dsmart}. First column is the
+#' @param lookup A two-column `data.frame` containing a mapping between the
+#'   integer soil class codes in the layers of `realisations`, and the soil
+#'   class codes defined by the map unit composition `data.frame` used as
+#'   an argument to `disaggregate` and `dsmart`. `lookup` is the
+#'   same lookup table that is produced by `dsmart`. First column is the
 #'   soil class code of the map unit composition; second column is the integer
 #'   soil class code.
 #' @param n.realisations An integer that identifies the number of realisations
-#'   of the soil class distribution that were computed by \code{disaggregate}.
-#'   Default value is \code{terra::nlyr(realisations)}.
+#'   of the soil class distribution that were computed by `disaggregate`.
+#'   Default value is `terra::nlyr(realisations)`.
 #' @param nprob At any location, disaggregated soil class predictions can be 
-#'   ranked according to their probabilities of occurence. \code{rdsmart} can 
+#'   ranked according to their probabilities of occurence. `rdsmart` can 
 #'   map the class predictions, and their probabilities, at any rank. 
-#'   \code{nprob} is an integer that identifies the number of probability ranks 
-#'   to map. For example, if \code{n = 3}, DSMART will map the first-, second- 
+#'   `nprob` is an integer that identifies the number of probability ranks 
+#'   to map. For example, if `n = 3`, DSMART will map the first-, second- 
 #'   and third-most-probable soil classes and their probabilities of occurrence.
 #' @param outputdir A character string that identifies the location of the main 
-#'   output directory. The folder \code{output} and its subfolders will be 
-#'   placed here. Default is the current working directory, \code{getwd()}.
-#' @param stub \emph{optional} A character string that identifies a short name
+#'   output directory. The folder `output` and its subfolders will be 
+#'   placed here. Default is the current working directory, `getwd()`.
+#' @param stub *optional* A character string that identifies a short name
 #'   that will be prepended to all output.
 #' @param type A character vector to specify the type of the predictions to be 
 #'   summarised. By default, "response" class predictions are used. If set to 
 #'   "prob", probabilistic predictions are used.
 #'
 #' @return A list that contains metadata about the current run of
-#'   \code{summarise}.
+#'   `summarise`.
 #'   
 #' @references McBratney, A.B., Mendonca Santos, M. de L., Minasny, B., 2003. On
 #'   digital soil mapping. Geoderma 117, 3--52. doi: 
-#'   \href{https://doi.org/10.1016/S0016-7061(03)00223-4}{10.1016/S0016-7061(03)00223-4}
+#'   [10.1016/S0016-7061(03)00223-4](https://doi.org/10.1016/S0016-7061(03)00223-4)
 #'   
 #'   Odgers, N.P., McBratney, A.B., Minasny, B., Sun, W., Clifford, D., 2014. 
-#'   DSMART: An algorithm to spatially disaggregate soil map units, \emph{in:} 
+#'   DSMART: An algorithm to spatially disaggregate soil map units, *in:* 
 #'   Arrouays, D., McKenzie, N.J., Hempel, J.W., Richer de Forges, A., 
 #'   McBratney, A.B. (Eds.), GlobalSoilMap: Basis of the Global Spatial Soil 
 #'   Information System. Taylor & Francis, London, pp. 261--266.
@@ -55,7 +55,7 @@
 #'   Odgers, N.P., Sun, W., McBratney, A.B., Minasny, B., Clifford, D., 2014. 
 #'   Disaggregating and harmonising soil map units through resampled 
 #'   classification trees. Geoderma 214, 91--100. doi: 
-#'   \href{https://doi.org/10.1016/j.geoderma.2013.09.024}{10.1016/j.geoderma.2013.09.024}
+#'   [10.1016/j.geoderma.2013.09.024](https://doi.org/10.1016/j.geoderma.2013.09.024)
 #'   
 #' @examples
 #' # Load datasets

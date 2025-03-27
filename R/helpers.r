@@ -1,42 +1,42 @@
 #' Sample the polygons of a SpatVector
 #' 
-#' \code{.getVirtualSamples} samples the polygons of a SpatVector. It 
+#' `.getVirtualSamples` samples the polygons of a SpatVector. It 
 #' accomplishes three tasks: (i) it draws samples from within each polygon, 
 #' (ii) extracts the values of the covariates at the sample locations, and (iii)
-#' through \code{.allocate}, allocates each sample to a soil class. See 
-#' \emph{Details} for more information.
+#' through `.allocate`, allocates each sample to a soil class. See 
+#' *Details* for more information.
 #' 
-#' @param covariates A \code{SpatRaster} of \emph{scorpan} environmental 
-#'   covariates to calibrate the \code{C50} classification trees against. See 
-#'   \emph{Details} for more information.
-#' @param polygons A \code{SpatVector} containing the soil map unit polygons 
+#' @param covariates A SpatRaster of *scorpan* environmental 
+#'   covariates to calibrate the `C50` classification trees against. See 
+#'   *Details* for more information.
+#' @param polygons A `SpatVector` containing the soil map unit polygons 
 #'   that will be disaggregated. The first field of the data frame must be an 
 #'   integer that identifies each polygon.
-#' @param composition A \code{data.frame} that contains information on the 
-#'   soil-class composition of each polygon in \code{polygons}. Each row 
+#' @param composition A `data.frame` that contains information on the 
+#'   soil-class composition of each polygon in `polygons`. Each row 
 #'   contains information about one soil class component of one polygon, which 
 #'   belongs to one soil map unit. First field contains the integer that 
 #'   identifies the polygon. Second field contains a code that identifies the 
 #'   soil map unit that the polygon belongs to. Third column contains a code 
 #'   that identifies the soil class. Fourth column contains a number in the 
-#'   range \code{(0, 100)} that identifies the proportion of the map unit that 
+#'   range `(0, 100)` that identifies the proportion of the map unit that 
 #'   the soil class corresponds to.
 #' @param n.realisations An integer that identifies the number of realisations 
 #'   of the soil class distribution that DSMART should compute.
 #' @param rate An integer that identifies the number of virtual samples to draw 
-#'   from each polygon in each realisation. If \code{method.sample =
-#'   "by_polygon"}, the number of samples to draw from each polygon in
-#'   \code{polygons}. If \code{method.sample = "by_area"}, the sampling density
+#'   from each polygon in each realisation. If `method.sample =
+#'   "by_polygon"`, the number of samples to draw from each polygon in
+#'   `polygons`. If `method.sample = "by_area"`, the sampling density
 #'   in number of samples per square kilometer.
 #' @param method.sample Identifies the sampling method. Valid values are 
-#'   \code{"by_polygon"} (the default), in which case the same number of samples
-#'   are taken from each polygon; or \code{"by_area"}, in which case the number 
+#'   `"by_polygon"` (the default), in which case the same number of samples
+#'   are taken from each polygon; or `"by_area"`, in which case the number 
 #'   of samples per polygon depends on the area of the polygon.
 #' @param method.allocate Method of allocation of virtual samples to soil
-#'   classes. Valid values are \code{"weighted"}, for weighted-random allocation
+#'   classes. Valid values are `"weighted"`, for weighted-random allocation
 #'   to a soil class from within the virtual sample's map unit; 
-#'   \code{"random_mapunit"}, for completely random allocation to a soil class 
-#'   from within the virtual sample's map unit; and \code{"random_all"}, for 
+#'   `"random_mapunit"`, for completely random allocation to a soil class 
+#'   from within the virtual sample's map unit; and `"random_all"`, for 
 #'   completely random allocation to a soil class from within the entire map 
 #'   area.
 #' 
@@ -261,14 +261,14 @@
 
 #' Allocate samples to soil classes
 #' 
-#' \code{.allocate} randomly or weighted-randomly draws a sample of size
-#' \code{n} from \code{classes}.
+#' `.allocate` randomly or weighted-randomly draws a sample of size
+#' `n` from `classes`.
 #' 
 #' @param classes The classes to allocate to.
 #' @param n The number of samples to allocate.
-#' @param method The method of allocation. Valid values are \code{"weighted"},
-#'   for weighted-random allocation using the weights in \code{weights}, and
-#'   \code{"random"} for random allocation (the default).
+#' @param method The method of allocation. Valid values are `"weighted"`,
+#'   for weighted-random allocation using the weights in `weights`, and
+#'   `"random"` for random allocation (the default).
 #'
 .allocate <- function(classes, n = 15, method = "random", weights = NULL)
 {
@@ -366,27 +366,27 @@
 #' Order raster stack (i.e.: multi-layered SpatRaster) values.
 #'
 #' This function orders the values in a raster stack. Ordering is performed on
-#' the vector of values at each grid cell. See \code{\link[base]{order}} for
+#' the vector of values at each grid cell. See [base::order()] for
 #' more information about how ordering works.
 #'
 #' The layers in the returned raster stack correspond to the rank ordering of
-#' the values in the original raster stack \code{r}. For example, the values in
+#' the values in the original raster stack `r`. For example, the values in
 #' the first returned layer identify the layer index of the original raster
 #' stack in which the largest value was found; the values in the second returned
 #' layer identify the original layer index in which the second largest value was
 #' found, and so-on. A custom ordering algorithm written in C++ is used to 
 #' decrease processing time.
 #'
-#' @param r A \code{SpatRaster} whose layers contain the values to be ordered.
+#' @param r A SpatRaster whose layers contain the values to be ordered.
 #' @param n At any location, disaggregated soil class predictions can be 
-#'   ranked according to their probabilities of occurrence. \code{rdsmart} can 
+#'   ranked according to their probabilities of occurrence. `rdsmart` can 
 #'   map the class predictions, and their probabilities, at any rank. 
-#'   \code{nprob} is an integer that identifies the number of probability ranks 
-#'   to map. For example, if \code{nprob = 3}, DSMART will map the first-, 
+#'   `nprob` is an integer that identifies the number of probability ranks 
+#'   to map. For example, if `nprob = 3`, DSMART will map the first-, 
 #'   second- and third-most-probable soil classes and their probabilities of 
 #'   occurrence.
 #'
-#' @return A \code{SpatRaster} containing the sorted data.
+#' @return A SpatRaster containing the sorted data.
 #'
 #' @export
 #' 
@@ -407,17 +407,17 @@ order_stack_values <- function(r, n = nlyr(r)) {
 #' Sort raster stack values
 #'
 #' #' This function sorts the values in a raster stack. Sorting is performed on
-#' the vector of values at each grid cell. See \code{\link[base]{sort}} for more
+#' the vector of values at each grid cell. See [base::sort()] for more
 #' information about how ordering works. A custom sorting algorithm written in 
 #' C++ is used to decrease processing time
 #'
-#' @param r A \code{SpatRaster} whose layers contain the values to be sorted.
-#' @param n An integer that identifies the number of layers in \code{r} that
-#'   should be sorted. Default is to sort all layers in \code{r}.
+#' @param r A SpatRaster whose layers contain the values to be sorted.
+#' @param n An integer that identifies the number of layers in `r` that
+#'   should be sorted. Default is to sort all layers in `r`.
 #' @param decreasing A boolean that indicates whether values should be sorted in
-#'   decreasing order (\code{TRUE}) or not (\code{FALSE}).
+#'   decreasing order (`TRUE`) or not (`FALSE`).
 #'
-#' @return A \code{SpatRaster} containing the sorted data.
+#' @return A SpatRaster containing the sorted data.
 #'
 #' @export
 #'
@@ -444,29 +444,29 @@ sort_stack_values <- function(r, n = nlyr(r), decreasing = TRUE) {
 #' \deqn{C = 1-(P_1-P_2); P_1\ge{P_2}}
 #'
 #' where \eqn{P_1} is the probability of the most probable class and \eqn{P_2}
-#' is the probability of the second most probable class (after Burrough \emph{et
-#' al.}, 1997; Odgers \emph{et al.}, 2014). The maximum confusion is 1, which
+#' is the probability of the second most probable class (after Burrough *et
+#' al.*, 1997; Odgers *et al.*, 2014). The maximum confusion is 1, which
 #' occurs when \eqn{P_1=P_2}. The minimum confusion is 0, which occurs when
 #' \eqn{P_1=1} and \eqn{P_2=0} (and therefore all other \eqn{P_i=0} too).
 #'
 #' This function computes the confusion index. It first sorts the probabilities
-#' for each grid cell in descending order using \code{\link{sort_stack_values}}.
+#' for each grid cell in descending order using [sort_stack_values()].
 #'
 #' @param r A SpatRaster of probabilities, where each layer corresponds to the 
 #'   probability of occurrence of a different soil class.
 #'
-#' @return A \code{SpatRaster} containing the confusion index data.
+#' @return A SpatRaster containing the confusion index data.
 #'
 #' @references Burrough, P.A., van Gaans, P.F.M., Hootsmans, R., 1997.
 #'   Continuous classification in soil survey: spatial correlation, confusion
 #'   and boundaries. Geoderma. 77, 115--135. doi:
-#'   \href{https://doi.org/10.1016/S0016-7061(97)00018-9}{10.1016/S0016-7061(97)00018-9}
+#'   [10.1016/S0016-7061(97)00018-9](https://doi.org/10.1016/S0016-7061(97)00018-9)
 #'   
 
 #' Odgers, N.P., Sun, W., McBratney, A.B., Minasny, B., Clifford,
 #' D., 2014. Disaggregating and harmonising soil map units through resampled
 #' classification trees. Geoderma 214, 91--100. doi:
-#' \href{https://doi.org/10.1016/j.geoderma.2013.09.024}{10.1016/j.geoderma.2013.09.024}
+#' [10.1016/j.geoderma.2013.09.024](https://doi.org/10.1016/j.geoderma.2013.09.024)
 #'
 #' @family uncertainty functions
 #'
@@ -498,18 +498,18 @@ confusion_index <- function(r, do.sort = FALSE) {
 #' where \eqn{P_i} is the probability of occurrence of soil class \eqn{i}. The
 #' logarithm with base \eqn{n_\text{orders}} is used so that the maximum entropy
 #' is 1, which occurs when all soil classes have equal probability of occurrence
-#' (Kempen \emph{et al.}, 2009). The minimum entropy is 0, which occurs when one
+#' (Kempen *et al.*, 2009). The minimum entropy is 0, which occurs when one
 #' soil order has a probability of 1 and all others zero (minimum uncertainty).
 #'
 #' @param r A SpatRaster of probabilities, where each layer corresponds to a
 #'   different soil class.
 #'
-#' @return A \code{SpatRaster} containing the Shannon entropy values.
+#' @return A SpatRaster containing the Shannon entropy values.
 #'
 #' @references Kempen, B., Brus, D.J., Heuvelink, G.B.M., Stoorvogel, J.J.,
 #'   2009. Updating the 1:50,000 Dutch soil map using legacy soil data: a
 #'   multinomial logistic regression approach. Geoderma. 151, 311--326. doi:
-#'   \href{https://doi.org/10.1016/j.geoderma.2009.04.023}{10.1016/j.geoderma.2009.04.023}
+#'   [10.1016/j.geoderma.2009.04.023](https://doi.org/10.1016/j.geoderma.2009.04.023)
 #'
 #' @family uncertainty functions
 #'

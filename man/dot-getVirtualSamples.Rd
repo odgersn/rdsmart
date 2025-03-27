@@ -15,50 +15,49 @@
 )
 }
 \arguments{
-\item{covariates}{A \code{SpatRaster} of \emph{scorpan} environmental 
-covariates to calibrate the \code{C50} classification trees against. See 
+\item{covariates}{A SpatRaster of \emph{scorpan} environmental
+covariates to calibrate the \code{C50} classification trees against. See
 \emph{Details} for more information.}
 
-\item{polygons}{A \code{SpatVector} containing the soil map unit polygons 
-that will be disaggregated. The first field of the data frame must be an 
+\item{polygons}{A \code{SpatVector} containing the soil map unit polygons
+that will be disaggregated. The first field of the data frame must be an
 integer that identifies each polygon.}
 
-\item{composition}{A \code{data.frame} that contains information on the 
-soil-class composition of each polygon in \code{polygons}. Each row 
-contains information about one soil class component of one polygon, which 
-belongs to one soil map unit. First field contains the integer that 
-identifies the polygon. Second field contains a code that identifies the 
-soil map unit that the polygon belongs to. Third column contains a code 
-that identifies the soil class. Fourth column contains a number in the 
-range \code{(0, 100)} that identifies the proportion of the map unit that 
+\item{composition}{A \code{data.frame} that contains information on the
+soil-class composition of each polygon in \code{polygons}. Each row
+contains information about one soil class component of one polygon, which
+belongs to one soil map unit. First field contains the integer that
+identifies the polygon. Second field contains a code that identifies the
+soil map unit that the polygon belongs to. Third column contains a code
+that identifies the soil class. Fourth column contains a number in the
+range \verb{(0, 100)} that identifies the proportion of the map unit that
 the soil class corresponds to.}
 
-\item{n.realisations}{An integer that identifies the number of realisations 
+\item{n.realisations}{An integer that identifies the number of realisations
 of the soil class distribution that DSMART should compute.}
 
-\item{rate}{An integer that identifies the number of virtual samples to draw 
-from each polygon in each realisation. If \code{method.sample =
-"by_polygon"}, the number of samples to draw from each polygon in
+\item{rate}{An integer that identifies the number of virtual samples to draw
+from each polygon in each realisation. If \code{method.sample = "by_polygon"}, the number of samples to draw from each polygon in
 \code{polygons}. If \code{method.sample = "by_area"}, the sampling density
 in number of samples per square kilometer.}
 
-\item{method.sample}{Identifies the sampling method. Valid values are 
+\item{method.sample}{Identifies the sampling method. Valid values are
 \code{"by_polygon"} (the default), in which case the same number of samples
-are taken from each polygon; or \code{"by_area"}, in which case the number 
+are taken from each polygon; or \code{"by_area"}, in which case the number
 of samples per polygon depends on the area of the polygon.}
 
 \item{method.allocate}{Method of allocation of virtual samples to soil
 classes. Valid values are \code{"weighted"}, for weighted-random allocation
-to a soil class from within the virtual sample's map unit; 
-\code{"random_mapunit"}, for completely random allocation to a soil class 
-from within the virtual sample's map unit; and \code{"random_all"}, for 
-completely random allocation to a soil class from within the entire map 
+to a soil class from within the virtual sample's map unit;
+\code{"random_mapunit"}, for completely random allocation to a soil class
+from within the virtual sample's map unit; and \code{"random_all"}, for
+completely random allocation to a soil class from within the entire map
 area.}
 }
 \description{
-\code{.getVirtualSamples} samples the polygons of a SpatVector. It 
-accomplishes three tasks: (i) it draws samples from within each polygon, 
+\code{.getVirtualSamples} samples the polygons of a SpatVector. It
+accomplishes three tasks: (i) it draws samples from within each polygon,
 (ii) extracts the values of the covariates at the sample locations, and (iii)
-through \code{.allocate}, allocates each sample to a soil class. See 
+through \code{.allocate}, allocates each sample to a soil class. See
 \emph{Details} for more information.
 }

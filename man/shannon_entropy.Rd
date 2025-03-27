@@ -11,7 +11,7 @@ shannon_entropy(r, nprob = 3, do.sort = FALSE)
 different soil class.}
 }
 \value{
-A \code{SpatRaster} containing the Shannon entropy values.
+A SpatRaster containing the Shannon entropy values.
 }
 \description{
 Shannon's entropy is an estimate of the prediction uncertainty.
@@ -29,9 +29,9 @@ soil order has a probability of 1 and all others zero (minimum uncertainty).
 }
 \references{
 Kempen, B., Brus, D.J., Heuvelink, G.B.M., Stoorvogel, J.J.,
-  2009. Updating the 1:50,000 Dutch soil map using legacy soil data: a
-  multinomial logistic regression approach. Geoderma. 151, 311--326. doi:
-  \href{https://doi.org/10.1016/j.geoderma.2009.04.023}{10.1016/j.geoderma.2009.04.023}
+2009. Updating the 1:50,000 Dutch soil map using legacy soil data: a
+multinomial logistic regression approach. Geoderma. 151, 311--326. doi:
+\href{https://doi.org/10.1016/j.geoderma.2009.04.023}{10.1016/j.geoderma.2009.04.023}
 }
 \seealso{
 Other uncertainty functions: 

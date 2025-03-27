@@ -16,9 +16,9 @@ summarise(
 )
 }
 \arguments{
-\item{realisations}{A \code{SpatRaster} where each layer contains one 
-realisation of the soil class distribution across the soil map area, as 
-produced by \code{\link{disaggregate}}. If probabilistic predictions are
+\item{realisations}{A SpatRaster where each layer contains one
+realisation of the soil class distribution across the soil map area, as
+produced by \code{\link[=disaggregate]{disaggregate()}}. If probabilistic predictions are
 used (\code{type = "prob"}), a list of RasterBrick objects with predicted
 class probabilities must be passed.}
 
@@ -34,36 +34,36 @@ soil class code.}
 of the soil class distribution that were computed by \code{disaggregate}.
 Default value is \code{terra::nlyr(realisations)}.}
 
-\item{nprob}{At any location, disaggregated soil class predictions can be 
-ranked according to their probabilities of occurence. \code{rdsmart} can 
-map the class predictions, and their probabilities, at any rank. 
-\code{nprob} is an integer that identifies the number of probability ranks 
-to map. For example, if \code{n = 3}, DSMART will map the first-, second- 
+\item{nprob}{At any location, disaggregated soil class predictions can be
+ranked according to their probabilities of occurence. \code{rdsmart} can
+map the class predictions, and their probabilities, at any rank.
+\code{nprob} is an integer that identifies the number of probability ranks
+to map. For example, if \code{n = 3}, DSMART will map the first-, second-
 and third-most-probable soil classes and their probabilities of occurrence.}
 
-\item{outputdir}{A character string that identifies the location of the main 
-output directory. The folder \code{output} and its subfolders will be 
+\item{outputdir}{A character string that identifies the location of the main
+output directory. The folder \code{output} and its subfolders will be
 placed here. Default is the current working directory, \code{getwd()}.}
 
 \item{stub}{\emph{optional} A character string that identifies a short name
 that will be prepended to all output.}
 
-\item{type}{A character vector to specify the type of the predictions to be 
-summarised. By default, "response" class predictions are used. If set to 
+\item{type}{A character vector to specify the type of the predictions to be
+summarised. By default, "response" class predictions are used. If set to
 "prob", probabilistic predictions are used.}
 }
 \value{
 A list that contains metadata about the current run of
-  \code{summarise}.
+\code{summarise}.
 }
 \description{
-\code{summarise} summarises the results of the spatial disaggregation of a 
-polygon soil map in several ways. First, it computes the probabilities of 
-occurrence of the soil classes that occur across all the map's map units. 
-Second, it ranks the soil class predictions according to their probabilities 
-of occurrence and maps the \emph{n}-most-probable soil classes at each grid 
+\code{summarise} summarises the results of the spatial disaggregation of a
+polygon soil map in several ways. First, it computes the probabilities of
+occurrence of the soil classes that occur across all the map's map units.
+Second, it ranks the soil class predictions according to their probabilities
+of occurrence and maps the \emph{n}-most-probable soil classes at each grid
 cell, and their probabilities. Finally, it computes Shannon's entropy on the
-class probabilities, and the degree of confusion between the most probable 
+class probabilities, and the degree of confusion between the most probable
 and second-most-probable soil classes.
 }
 \examples{
@@ -77,17 +77,17 @@ summarise(dalrymple_realisations, dalrymple_lookup, nprob = 5)
 }
 \references{
 McBratney, A.B., Mendonca Santos, M. de L., Minasny, B., 2003. On
-  digital soil mapping. Geoderma 117, 3--52. doi: 
-  \href{https://doi.org/10.1016/S0016-7061(03)00223-4}{10.1016/S0016-7061(03)00223-4}
-  
-  Odgers, N.P., McBratney, A.B., Minasny, B., Sun, W., Clifford, D., 2014. 
-  DSMART: An algorithm to spatially disaggregate soil map units, \emph{in:} 
-  Arrouays, D., McKenzie, N.J., Hempel, J.W., Richer de Forges, A., 
-  McBratney, A.B. (Eds.), GlobalSoilMap: Basis of the Global Spatial Soil 
-  Information System. Taylor & Francis, London, pp. 261--266.
-  
-  Odgers, N.P., Sun, W., McBratney, A.B., Minasny, B., Clifford, D., 2014. 
-  Disaggregating and harmonising soil map units through resampled 
-  classification trees. Geoderma 214, 91--100. doi: 
-  \href{https://doi.org/10.1016/j.geoderma.2013.09.024}{10.1016/j.geoderma.2013.09.024}
+digital soil mapping. Geoderma 117, 3--52. doi:
+\href{https://doi.org/10.1016/S0016-7061(03)00223-4}{10.1016/S0016-7061(03)00223-4}
+
+Odgers, N.P., McBratney, A.B., Minasny, B., Sun, W., Clifford, D., 2014.
+DSMART: An algorithm to spatially disaggregate soil map units, \emph{in:}
+Arrouays, D., McKenzie, N.J., Hempel, J.W., Richer de Forges, A.,
+McBratney, A.B. (Eds.), GlobalSoilMap: Basis of the Global Spatial Soil
+Information System. Taylor & Francis, London, pp. 261--266.
+
+Odgers, N.P., Sun, W., McBratney, A.B., Minasny, B., Clifford, D., 2014.
+Disaggregating and harmonising soil map units through resampled
+classification trees. Geoderma 214, 91--100. doi:
+\href{https://doi.org/10.1016/j.geoderma.2013.09.024}{10.1016/j.geoderma.2013.09.024}
 }

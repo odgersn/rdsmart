@@ -2,7 +2,7 @@
 #' the Dalrymple Shire map.
 #' 
 #' A dataset containing the composition of soil map units across a small part of
-#' the Land Resources of the Dalrymple Shire map (Rogers \emph{et al}., 1999a, 
+#' the Land Resources of the Dalrymple Shire map (Rogers *et al*., 1999a, 
 #' b) from Queensland, Australia.
 #' 
 #' @format A data frame with 43 rows and 4 variables: \describe{ 
@@ -22,7 +22,7 @@
 #'   
 "dalrymple_composition"
 
-#' \emph{scorpan} environmental covariates for a small part of the former
+#' *scorpan* environmental covariates for a small part of the former
 #' Dalrymple Shire, Queensland, Australia.
 #'
 "dalrymple_covariates"

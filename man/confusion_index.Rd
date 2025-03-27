@@ -7,11 +7,11 @@
 confusion_index(r, do.sort = FALSE)
 }
 \arguments{
-\item{r}{A SpatRaster of probabilities, where each layer corresponds to the 
+\item{r}{A SpatRaster of probabilities, where each layer corresponds to the
 probability of occurrence of a different soil class.}
 }
 \value{
-A \code{SpatRaster} containing the confusion index data.
+A SpatRaster containing the confusion index data.
 }
 \description{
 The confusion index is an estimate of the prediction uncertainty.
@@ -28,14 +28,14 @@ occurs when \eqn{P_1=P_2}. The minimum confusion is 0, which occurs when
 \eqn{P_1=1} and \eqn{P_2=0} (and therefore all other \eqn{P_i=0} too).
 
 This function computes the confusion index. It first sorts the probabilities
-for each grid cell in descending order using \code{\link{sort_stack_values}}.
+for each grid cell in descending order using \code{\link[=sort_stack_values]{sort_stack_values()}}.
 }
 \references{
 Burrough, P.A., van Gaans, P.F.M., Hootsmans, R., 1997.
-  Continuous classification in soil survey: spatial correlation, confusion
-  and boundaries. Geoderma. 77, 115--135. doi:
-  \href{https://doi.org/10.1016/S0016-7061(97)00018-9}{10.1016/S0016-7061(97)00018-9}
-  
+Continuous classification in soil survey: spatial correlation, confusion
+and boundaries. Geoderma. 77, 115--135. doi:
+\href{https://doi.org/10.1016/S0016-7061(97)00018-9}{10.1016/S0016-7061(97)00018-9}
+
 Odgers, N.P., Sun, W., McBratney, A.B., Minasny, B., Clifford,
 D., 2014. Disaggregating and harmonising soil map units through resampled
 classification trees. Geoderma 214, 91--100. doi:

@@ -1,8 +1,8 @@
 Package: rdsmart
 Type: Package
 Title: Disaggregation and harmonisation of soil map units through resampled classification trees
-Version: 2.1.3
-Date: 2025-02-24
+Version: 2.1.4
+Date: 2025-03-28
 Authors@R: c(person("Nathan", "Odgers", 
                     email = "odgersn@landcareresearch.co.nz",
                     role = c("cre", "aut"),
@@ -33,3 +33,4 @@ RoxygenNote: 7.3.2
 Encoding: UTF-8
 VignetteBuilder: knitr
 URL: https://odgersn.github.io/rdsmart/
+Roxygen: list(markdown = TRUE)

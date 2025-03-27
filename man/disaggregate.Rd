@@ -25,36 +25,35 @@ disaggregate(
 )
 }
 \arguments{
-\item{covariates}{A \code{SpatRaster} of \emph{scorpan} environmental
+\item{covariates}{A SpatRaster of \emph{scorpan} environmental
 covariates to calibrate the \code{C50} classification trees against. See
 \emph{Details} for more information.}
 
-\item{polygons}{A \code{SpatVector} containing the soil map unit polygons 
-that will be disaggregated. The first field of the data frame must be an 
+\item{polygons}{A \code{SpatVector} containing the soil map unit polygons
+that will be disaggregated. The first field of the data frame must be an
 integer that identifies each polygon.}
 
 \item{composition}{A \code{data.frame} that contains information on the
-  soil-class composition of each polygon in \code{polygons}. Each row
-  contains information about one soil class component of one polygon, which
-  belongs to one soil map unit. First field contains the integer that
-  identifies the polygon. Second field contains a code that identifies the
-  soil map unit that the polygon belongs to.
+soil-class composition of each polygon in \code{polygons}. Each row
+contains information about one soil class component of one polygon, which
+belongs to one soil map unit. First field contains the integer that
+identifies the polygon. Second field contains a code that identifies the
+soil map unit that the polygon belongs to.
 
-  If \code{strata = NULL} (the default), third column contains a code that
-  identifies the soil class and fourth column contains a number in the range
-  \code{(0, 100)} that identifies the proportion of the \strong{map unit}
-  that the soil class corresponds to. See the example data
-  \code{data(dalrymple_composition)}.
+If \code{strata = NULL} (the default), third column contains a code that
+identifies the soil class and fourth column contains a number in the range
+\verb{(0, 100)} that identifies the proportion of the \strong{map unit}
+that the soil class corresponds to. See the example data
+\code{data(dalrymple_composition)}.
 
-  If \code{strata} is a \code{SpatRaster}, third column contains an integer
-  that identifies the stratum in \code{strata}, fourth column contains a code
-  that identifies the soil class and fifth column contains a number in the
-  range \code{(0, 100)} that identifies the proportion of the
-  \strong{stratum} that the soil class corresponds to.}
+If \code{strata} is a SpatRaster, third column contains an integer
+that identifies the stratum in \code{strata}, fourth column contains a code
+that identifies the soil class and fifth column contains a number in the
+range \verb{(0, 100)} that identifies the proportion of the
+\strong{stratum} that the soil class corresponds to.}
 
 \item{rate}{An integer that identifies the number of virtual samples to draw
-from each polygon in each realisation. If \code{method.sample =
-"by_polygon"}, the number of samples to draw from each polygon in
+from each polygon in each realisation. If \code{method.sample = "by_polygon"}, the number of samples to draw from each polygon in
 \code{polygons}. If \code{method.sample = "by_area"}, the sampling density
 in number of samples per square kilometer.}
 
@@ -65,7 +64,7 @@ soil class distribution that DSMART should compute.}
 observations of the soil class at locations across the soil map area. These
 data augment the virtual samples and are used in each realisation. Each row
 contains information about one soil class observation. First and second
-fields contain the \emph{x-} and \emph{y-}components of the observation's
+fields contain the \emph{x-} and *y-*components of the observation's
 spatial location. Third field is the soil class code. See \emph{Details}.}
 
 \item{method.sample}{Identifies the sampling method. Valid values are
@@ -86,12 +85,12 @@ value is passed, a C5.0 decision tree is built. Otherwise, the value must
 match a valid 'learner' argument in the mlr3::lrn() function.}
 
 \item{args.model}{A named list of arguments to be passed to the mlr3 learner
-object. The list will modify the learner's 'param_set' which controls the 
-behavior of the model. Named arguments are passed directly to the train 
+object. The list will modify the learner's 'param_set' which controls the
+behavior of the model. Named arguments are passed directly to the train
 function and predictive model. To view a model's given parameter set, use
 \code{mlr3::lrn(method.model)$param_set}}
 
-\item{strata}{\emph{optional} An integer-valued \code{SpatRaster} that will
+\item{strata}{\emph{optional} An integer-valued SpatRaster that will
 be used to stratify the allocation of virtual samples to soil classes.
 Integer values could represent classes of slope position (e.g. crest,
 backslope, footslope, etc.) or land use (e.g. cropland, native vegetation,
@@ -109,12 +108,12 @@ that will be prepended to all output.}
 should be treated as factors.}
 
 \item{type}{A character vector to specify the type of the predictions. By
-default, "response" class predictions are used. If set to "prob", a 
+default, "response" class predictions are used. If set to "prob", a
 SpatRaster with class probabilities will be produced for each realisation.}
 }
 \value{
 A list that contains metadata about the current run of
-  \code{disaggregate}.
+\code{disaggregate}.
 }
 \description{
 This function, together with companion function \code{summarise} implements the
@@ -166,17 +165,17 @@ disaggregate(unwrap(dalrymple_covariates), unwrap(dalrymple_polygons), dalrymple
 }
 \references{
 McBratney, A.B., Mendonca Santos, M. de L., Minasny, B., 2003. On
-  digital soil mapping. Geoderma 117, 3--52. doi:
-  \href{https://doi.org/10.1016/S0016-7061(03)00223-4}{10.1016/S0016-7061(03)00223-4}
-  
-  Odgers, N.P., McBratney, A.B., Minasny, B., Sun, W., Clifford, D., 2014.
-  DSMART: An algorithm to spatially disaggregate soil map units, \emph{in:}
-  Arrouays, D., McKenzie, N.J., Hempel, J.W., Richer de Forges, A.,
-  McBratney, A.B. (Eds.), GlobalSoilMap: Basis of the Global Spatial Soil
-  Information System. Taylor & Francis, London, pp. 261--266.
+digital soil mapping. Geoderma 117, 3--52. doi:
+\href{https://doi.org/10.1016/S0016-7061(03)00223-4}{10.1016/S0016-7061(03)00223-4}
 
-  Odgers, N.P., Sun, W., McBratney, A.B., Minasny, B., Clifford, D., 2014.
-  Disaggregating and harmonising soil map units through resampled
-  classification trees. Geoderma 214, 91--100. doi:
-  \href{https://doi.org/10.1016/j.geoderma.2013.09.024}{10.1016/j.geoderma.2013.09.024}
+Odgers, N.P., McBratney, A.B., Minasny, B., Sun, W., Clifford, D., 2014.
+DSMART: An algorithm to spatially disaggregate soil map units, \emph{in:}
+Arrouays, D., McKenzie, N.J., Hempel, J.W., Richer de Forges, A.,
+McBratney, A.B. (Eds.), GlobalSoilMap: Basis of the Global Spatial Soil
+Information System. Taylor & Francis, London, pp. 261--266.
+
+Odgers, N.P., Sun, W., McBratney, A.B., Minasny, B., Clifford, D., 2014.
+Disaggregating and harmonising soil map units through resampled
+classification trees. Geoderma 214, 91--100. doi:
+\href{https://doi.org/10.1016/j.geoderma.2013.09.024}{10.1016/j.geoderma.2013.09.024}
 }
